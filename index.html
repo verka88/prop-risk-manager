@@ -1,182 +1,126 @@
-function num(id) {
-  const v = parseFloat(document.getElementById(id).value);
-  return Number.isFinite(v) ? v : 0;
-}
+<!doctype html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prop Risk Manager 10k (FX)</title>
 
-function fmt(x) {
-  const ax = Math.abs(x);
-  const d = ax >= 1000 ? 0 : ax >= 100 ? 2 : ax >= 1 ? 4 : 6;
-  return x.toFixed(d);
-}
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#111111" />
 
-function parsePair(pair) {
-  // "EURUSD" -> base "EUR", quote "USD"
-  return { base: pair.slice(0, 3), quote: pair.slice(3, 6) };
-}
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 0; background:#0b0b0c; color:#f2f2f2; }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 16px; }
+    h1 { font-size: 20px; margin: 10px 0 16px; }
+    h2 { font-size: 14px; opacity:.9; margin: 0 0 10px; }
+    .card { background:#151519; border:1px solid #24242a; border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+    label { display:block; font-size: 12px; opacity:.85; margin: 10px 0 6px; }
+    input, select { width: 100%; padding: 10px; border-radius: 10px; border:1px solid #2c2c35; background:#0f0f13; color:#f2f2f2; }
+    .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .grid3 { display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .row { display:flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #24242a; }
+    .row:last-child { border-bottom: 0; }
+    button { width:100%; padding: 12px; border-radius: 12px; border:1px solid #2c2c35; background:#1c1c24; color:#fff; font-weight:600; cursor:pointer; }
+  </style>
+</head>
+<body>
 
-function getPipSize(pair) {
-  // JPY pairs typically 0.01 pip size; others 0.0001
-  return pair.endsWith("JPY") ? 0.01 : 0.0001;
-}
+<div class="wrap">
+  <h1>Prop Risk Manager 10 000€ (FX)</h1>
 
-function pipValueEurPerLot({ base, quote }, price, lotUnits, pipSize, quoteToEur) {
-  // pip value in quote currency per 1.00 lot: lotUnits * pipSize
-  const pipValueQuote = lotUnits * pipSize;
+  <div class="card">
+    <h2>Prop Limity</h2>
 
-  // Account currency is EUR
-  if (quote === "EUR") {
-    // quote is EUR -> already in EUR
-    return pipValueQuote;
-  }
+    <div class="grid3">
+      <div>
+        <label>Start Balance</label>
+        <input id="startBalance" type="number" value="10000">
+      </div>
+      <div>
+        <label>Daily %</label>
+        <input id="dailyPct" type="number" value="5">
+      </div>
+      <div>
+        <label>Max %</label>
+        <input id="maxPct" type="number" value="10">
+      </div>
+    </div>
 
-  if (base === "EUR") {
-    // base is EUR -> convert quote->EUR by dividing by price (e.g., EURUSD: $10 / EURUSD = EUR)
-    // Works for any EURXXX (EURUSD, EURJPY, EURGBP, ...)
-    return pipValueQuote / price;
-  }
+    <div class="grid">
+      <div>
+        <label>Current Balance</label>
+        <input id="currentBalance" type="number" value="10000">
+      </div>
+      <div>
+        <label>Today PnL</label>
+        <input id="todayPnl" type="number" value="0">
+      </div>
+    </div>
+  </div>
 
-  // EUR not in the pair: need user-provided conversion quote -> EUR
-  // Example: GBPUSD (quote USD) -> USD->EUR, USDJPY (quote JPY) -> JPY->EUR
-  return pipValueQuote * quoteToEur;
-}
+  <div class="card">
+    <h2>Trade Výpočet</h2>
 
-function calc() {
-  // Prop inputs
-  const startBalance = num("startBalance");
-  const dailyPct = num("dailyPct");
-  const maxPct = num("maxPct");
-  const currentBalance = num("currentBalance");
-  const todayPnl = num("todayPnl");
+    <div class="grid3">
+      <div>
+        <label>Pár</label>
+        <select id="pair">
+          <option>EURUSD</option>
+          <option>GBPUSD</option>
+          <option>USDJPY</option>
+          <option>EURJPY</option>
+          <option>EURGBP</option>
+        </select>
+      </div>
 
-  const dailyLimit = startBalance * (dailyPct / 100);
-  const maxLimit = startBalance * (maxPct / 100);
+      <div>
+        <label>Smer</label>
+        <select id="dir">
+          <option>LONG</option>
+          <option>SHORT</option>
+        </select>
+      </div>
 
-  const usedDaily = Math.max(0, -todayPnl);
-  const remDaily = Math.max(0, dailyLimit - usedDaily);
+      <div>
+        <label>Risk %</label>
+        <select id="riskPct">
+          <option value="0.25">0.25%</option>
+          <option value="0.5" selected>0.5%</option>
+          <option value="1">1%</option>
+        </select>
+      </div>
+    </div>
 
-  const drawdown = Math.max(0, startBalance - currentBalance);
-  const remMax = Math.max(0, maxLimit - drawdown);
+    <div class="grid">
+      <div>
+        <label>Entry</label>
+        <input id="entry" type="number" value="1.1000">
+      </div>
+      <div>
+        <label>Stop (pips)</label>
+        <input id="stopPips" type="number" value="20">
+      </div>
+    </div>
 
-  const allowedRiskNow = Math.max(0, Math.min(remDaily, remMax));
+    <button id="calcBtn">Vypočítať</button>
+  </div>
 
-  // Trade inputs
-  const pair = document.getElementById("pair").value;
-  const { base, quote } = parsePair(pair);
+  <div class="card">
+    <h2>Výsledky</h2>
 
-  const dir = document.getElementById("dir").value;
-  const entry = num("entry");
-  const atr = num("atr");
-  const atrMult = num("atrMult");
-  const buffer = num("buffer");
-  const r = num("r");
-  const tpBuffer = num("tpBuffer");
+    <div class="row">
+      <div>Risk €</div>
+      <div id="riskEur">-</div>
+    </div>
 
-  const riskPct = num("riskPct"); // percent
-  const riskEur = currentBalance * (riskPct / 100);
+    <div class="row">
+      <div>Lot Size</div>
+      <div id="lots">-</div>
+    </div>
+  </div>
 
-  const lotUnits = Math.max(1, Math.round(num("lotUnits")));
-  const quoteToEur = num("quoteToEur");
+</div>
 
-  const pipSize = getPipSize(pair);
-
-  // ATR stop in price units
-  const stopDist = atr * atrMult + buffer;
-  const stopPips = pipSize > 0 ? (stopDist / pipSize) : 0;
-
-  const sl = dir === "LONG" ? entry - stopDist : entry + stopDist;
-  const tp = dir === "LONG" ? entry + stopDist * r : entry - stopDist * r;
-  const tpAdj = dir === "LONG" ? tp - tpBuffer : tp + tpBuffer;
-
-  // pip value in EUR per 1.00 lot
-  const pipValEur = pipValueEurPerLot({ base, quote }, entry, lotUnits, pipSize, quoteToEur);
-
-  // lots = riskEUR / (stopPips * pipValueEUR_perLot)
-  const denom = stopPips * pipValEur;
-  const lotsRaw = denom > 0 ? (riskEur / denom) : 0;
-
-  // round to 0.01 lot
-  const lots = lotsRaw > 0 ? Math.floor(lotsRaw * 100) / 100 : 0;
-
-  // trades left today (rough)
-  const tradesLeft = riskEur > 0 ? Math.floor(allowedRiskNow / riskEur) : 0;
-
-  // status / warnings
-  let status = "OK";
-  let cls = "";
-
-  if (allowedRiskNow <= 0) {
-    status = "STOP: limit reached";
-    cls = "bad";
-  } else if (riskEur > allowedRiskNow) {
-    status = "Risk je vyšší než povolený (zníž risk %)";
-    cls = "warn";
-  } else if (tradesLeft <= 0) {
-    status = "Dnes už radšej neotvárať ďalší trade";
-    cls = "warn";
-  }
-
-  // Auto-fill quoteToEur helper for common cases
-  // If quote is USD and base is EUR (EURUSD), then USD->EUR = 1 / price
-  // If quote is EUR, user can keep 1 (unused)
-  // We won't overwrite if EUR not in pair because user may know better.
-  if (base === "EUR" && quote === "USD") {
-    const usdToEur = entry > 0 ? (1 / entry) : quoteToEur;
-    // only set if field is empty/0-ish
-    const q = num("quoteToEur");
-    if (q <= 0.000001) document.getElementById("quoteToEur").value = usdToEur.toFixed(6);
-  }
-
-  // Outputs
-  document.getElementById("dailyLimit").textContent = fmt(dailyLimit);
-  document.getElementById("maxLimit").textContent = fmt(maxLimit);
-  document.getElementById("remDaily").textContent = fmt(remDaily);
-  document.getElementById("remMax").textContent = fmt(remMax);
-  document.getElementById("allowedRisk").textContent = fmt(allowedRiskNow);
-
-  document.getElementById("pipSize").textContent = pipSize.toString();
-  document.getElementById("pipValueEur").textContent = fmt(pipValEur);
-
-  document.getElementById("stopDist").textContent = fmt(stopDist);
-  document.getElementById("stopPips").textContent = fmt(stopPips);
-  document.getElementById("sl").textContent = fmt(sl);
-  document.getElementById("tp").textContent = fmt(tp);
-  document.getElementById("tpAdj").textContent = fmt(tpAdj);
-
-  document.getElementById("riskEur").textContent = fmt(riskEur);
-  document.getElementById("lots").textContent = lots > 0 ? lots.toFixed(2) : "-";
-  document.getElementById("tradesLeft").textContent = Number.isFinite(tradesLeft) ? tradesLeft.toString() : "-";
-
-  const statusEl = document.getElementById("status");
-  statusEl.textContent = status;
-  statusEl.className = cls;
-}
-
-const ids = [
-  "startBalance","dailyPct","maxPct","currentBalance","todayPnl",
-  "pair","dir","r","entry","atr","atrMult","buffer","riskPct","tpBuffer",
-  "quoteToEur","lotUnits"
-];
-ids.forEach(id => document.getElementById(id).addEventListener("input", calc));
-calc();
-
-document.getElementById("copyBtn").addEventListener("click", async () => {
-  const pair = document.getElementById("pair").value;
-  const dir = document.getElementById("dir").value;
-  const entry = document.getElementById("entry").value;
-  const sl = document.getElementById("sl").textContent;
-  const tpAdj = document.getElementById("tpAdj").textContent;
-  const lots = document.getElementById("lots").textContent;
-
-  const text = `${pair} ${dir}\nLOTS: ${lots}\nENTRY: ${entry}\nSL: ${sl}\nTP: ${tpAdj}`;
-  try {
-    await navigator.clipboard.writeText(text);
-    alert("Skopírované ✅");
-  } catch {
-    alert(text);
-  }
-});
-
-// PWA register
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("./sw.js").catch(() => {});
-}
+<script src="app.js"></script>
+</body>
+</html>
