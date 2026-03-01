@@ -1,0 +1,182 @@
+function num(id) {
+  const v = parseFloat(document.getElementById(id).value);
+  return Number.isFinite(v) ? v : 0;
+}
+
+function fmt(x) {
+  const ax = Math.abs(x);
+  const d = ax >= 1000 ? 0 : ax >= 100 ? 2 : ax >= 1 ? 4 : 6;
+  return x.toFixed(d);
+}
+
+function parsePair(pair) {
+  // "EURUSD" -> base "EUR", quote "USD"
+  return { base: pair.slice(0, 3), quote: pair.slice(3, 6) };
+}
+
+function getPipSize(pair) {
+  // JPY pairs typically 0.01 pip size; others 0.0001
+  return pair.endsWith("JPY") ? 0.01 : 0.0001;
+}
+
+function pipValueEurPerLot({ base, quote }, price, lotUnits, pipSize, quoteToEur) {
+  // pip value in quote currency per 1.00 lot: lotUnits * pipSize
+  const pipValueQuote = lotUnits * pipSize;
+
+  // Account currency is EUR
+  if (quote === "EUR") {
+    // quote is EUR -> already in EUR
+    return pipValueQuote;
+  }
+
+  if (base === "EUR") {
+    // base is EUR -> convert quote->EUR by dividing by price (e.g., EURUSD: $10 / EURUSD = EUR)
+    // Works for any EURXXX (EURUSD, EURJPY, EURGBP, ...)
+    return pipValueQuote / price;
+  }
+
+  // EUR not in the pair: need user-provided conversion quote -> EUR
+  // Example: GBPUSD (quote USD) -> USD->EUR, USDJPY (quote JPY) -> JPY->EUR
+  return pipValueQuote * quoteToEur;
+}
+
+function calc() {
+  // Prop inputs
+  const startBalance = num("startBalance");
+  const dailyPct = num("dailyPct");
+  const maxPct = num("maxPct");
+  const currentBalance = num("currentBalance");
+  const todayPnl = num("todayPnl");
+
+  const dailyLimit = startBalance * (dailyPct / 100);
+  const maxLimit = startBalance * (maxPct / 100);
+
+  const usedDaily = Math.max(0, -todayPnl);
+  const remDaily = Math.max(0, dailyLimit - usedDaily);
+
+  const drawdown = Math.max(0, startBalance - currentBalance);
+  const remMax = Math.max(0, maxLimit - drawdown);
+
+  const allowedRiskNow = Math.max(0, Math.min(remDaily, remMax));
+
+  // Trade inputs
+  const pair = document.getElementById("pair").value;
+  const { base, quote } = parsePair(pair);
+
+  const dir = document.getElementById("dir").value;
+  const entry = num("entry");
+  const atr = num("atr");
+  const atrMult = num("atrMult");
+  const buffer = num("buffer");
+  const r = num("r");
+  const tpBuffer = num("tpBuffer");
+
+  const riskPct = num("riskPct"); // percent
+  const riskEur = currentBalance * (riskPct / 100);
+
+  const lotUnits = Math.max(1, Math.round(num("lotUnits")));
+  const quoteToEur = num("quoteToEur");
+
+  const pipSize = getPipSize(pair);
+
+  // ATR stop in price units
+  const stopDist = atr * atrMult + buffer;
+  const stopPips = pipSize > 0 ? (stopDist / pipSize) : 0;
+
+  const sl = dir === "LONG" ? entry - stopDist : entry + stopDist;
+  const tp = dir === "LONG" ? entry + stopDist * r : entry - stopDist * r;
+  const tpAdj = dir === "LONG" ? tp - tpBuffer : tp + tpBuffer;
+
+  // pip value in EUR per 1.00 lot
+  const pipValEur = pipValueEurPerLot({ base, quote }, entry, lotUnits, pipSize, quoteToEur);
+
+  // lots = riskEUR / (stopPips * pipValueEUR_perLot)
+  const denom = stopPips * pipValEur;
+  const lotsRaw = denom > 0 ? (riskEur / denom) : 0;
+
+  // round to 0.01 lot
+  const lots = lotsRaw > 0 ? Math.floor(lotsRaw * 100) / 100 : 0;
+
+  // trades left today (rough)
+  const tradesLeft = riskEur > 0 ? Math.floor(allowedRiskNow / riskEur) : 0;
+
+  // status / warnings
+  let status = "OK";
+  let cls = "";
+
+  if (allowedRiskNow <= 0) {
+    status = "STOP: limit reached";
+    cls = "bad";
+  } else if (riskEur > allowedRiskNow) {
+    status = "Risk je vyšší než povolený (zníž risk %)";
+    cls = "warn";
+  } else if (tradesLeft <= 0) {
+    status = "Dnes už radšej neotvárať ďalší trade";
+    cls = "warn";
+  }
+
+  // Auto-fill quoteToEur helper for common cases
+  // If quote is USD and base is EUR (EURUSD), then USD->EUR = 1 / price
+  // If quote is EUR, user can keep 1 (unused)
+  // We won't overwrite if EUR not in pair because user may know better.
+  if (base === "EUR" && quote === "USD") {
+    const usdToEur = entry > 0 ? (1 / entry) : quoteToEur;
+    // only set if field is empty/0-ish
+    const q = num("quoteToEur");
+    if (q <= 0.000001) document.getElementById("quoteToEur").value = usdToEur.toFixed(6);
+  }
+
+  // Outputs
+  document.getElementById("dailyLimit").textContent = fmt(dailyLimit);
+  document.getElementById("maxLimit").textContent = fmt(maxLimit);
+  document.getElementById("remDaily").textContent = fmt(remDaily);
+  document.getElementById("remMax").textContent = fmt(remMax);
+  document.getElementById("allowedRisk").textContent = fmt(allowedRiskNow);
+
+  document.getElementById("pipSize").textContent = pipSize.toString();
+  document.getElementById("pipValueEur").textContent = fmt(pipValEur);
+
+  document.getElementById("stopDist").textContent = fmt(stopDist);
+  document.getElementById("stopPips").textContent = fmt(stopPips);
+  document.getElementById("sl").textContent = fmt(sl);
+  document.getElementById("tp").textContent = fmt(tp);
+  document.getElementById("tpAdj").textContent = fmt(tpAdj);
+
+  document.getElementById("riskEur").textContent = fmt(riskEur);
+  document.getElementById("lots").textContent = lots > 0 ? lots.toFixed(2) : "-";
+  document.getElementById("tradesLeft").textContent = Number.isFinite(tradesLeft) ? tradesLeft.toString() : "-";
+
+  const statusEl = document.getElementById("status");
+  statusEl.textContent = status;
+  statusEl.className = cls;
+}
+
+const ids = [
+  "startBalance","dailyPct","maxPct","currentBalance","todayPnl",
+  "pair","dir","r","entry","atr","atrMult","buffer","riskPct","tpBuffer",
+  "quoteToEur","lotUnits"
+];
+ids.forEach(id => document.getElementById(id).addEventListener("input", calc));
+calc();
+
+document.getElementById("copyBtn").addEventListener("click", async () => {
+  const pair = document.getElementById("pair").value;
+  const dir = document.getElementById("dir").value;
+  const entry = document.getElementById("entry").value;
+  const sl = document.getElementById("sl").textContent;
+  const tpAdj = document.getElementById("tpAdj").textContent;
+  const lots = document.getElementById("lots").textContent;
+
+  const text = `${pair} ${dir}\nLOTS: ${lots}\nENTRY: ${entry}\nSL: ${sl}\nTP: ${tpAdj}`;
+  try {
+    await navigator.clipboard.writeText(text);
+    alert("Skopírované ✅");
+  } catch {
+    alert(text);
+  }
+});
+
+// PWA register
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./sw.js").catch(() => {});
+}
