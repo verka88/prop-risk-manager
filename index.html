@@ -20,7 +20,6 @@
   .modeBtn { flex:1; padding:10px; background:#1c1c24; border:1px solid #2c2c35; border-radius:12px; cursor:pointer; text-align:center; font-weight:700; }
   .active { background:#2a2a35; }
   .lockOverlay { opacity:.55; }
-  .proBox { margin-top:10px; padding-top:10px; border-top:1px solid #24242a; }
 </style>
 </head>
 
@@ -29,11 +28,40 @@
 
   <h2 style="margin:6px 0 14px;">Universal Risk Calculator (FX / Gold / Crypto / Indices)</h2>
 
+  <!-- ===== PRO LOGIN (Pro only, Free works without login) ===== -->
+  <div class="card">
+    <h3 style="margin:0 0 8px; font-size:14px;">Pro Login</h3>
+
+    <div class="grid2">
+      <div>
+        <label>Email</label>
+        <input id="email" type="email" placeholder="you@email.com">
+      </div>
+      <div>
+        <label>Password</label>
+        <input id="password" type="password" placeholder="••••••••">
+      </div>
+    </div>
+
+    <div class="grid3" style="margin-top:10px;">
+      <button id="signUpBtn" type="button">Create account</button>
+      <button id="signInBtn" type="button">Sign in</button>
+      <button id="signOutBtn" type="button">Sign out</button>
+    </div>
+
+    <div class="muted" id="userStatus" style="margin-top:8px;">Not signed in</div>
+    <div class="muted" style="margin-top:6px;">
+      Free works without login. Discipline features unlock after sign-in.
+    </div>
+  </div>
+
+  <!-- ===== MODE SWITCH (UI) ===== -->
   <div class="switch">
     <div id="quickModeBtn" class="modeBtn active">Quick</div>
     <div id="disciplineModeBtn" class="modeBtn">Discipline 🔒</div>
   </div>
 
+  <!-- ===== CALCULATOR (FREE) ===== -->
   <div class="card">
     <div class="grid3">
       <div>
@@ -81,7 +109,7 @@
       </div>
       <div>
         <label>Value per unit @ 1 lot (EUR)</label>
-        <input id="valuePerUnit" type="number" step="0.0001" value="9.1">
+        <input id="valuePerUnit" type="number" step="0.0001" value="9.0">
         <div class="muted">Most important field for accuracy</div>
       </div>
     </div>
@@ -96,13 +124,14 @@
         <input id="tpBuffer" type="number" step="0.00001" value="0">
       </div>
       <div style="display:flex; align-items:end;">
-        <button id="calcBtn">Calculate</button>
+        <button id="calcBtn" type="button">Calculate</button>
       </div>
     </div>
 
-    <div id="clickStatus" class="muted"></div>
+    <div id="clickStatus" class="muted" style="margin-top:8px;"></div>
   </div>
 
+  <!-- ===== RESULTS ===== -->
   <div class="card">
     <h3 style="margin:0 0 8px; font-size:14px;">Results</h3>
     <div class="row"><div>Risk (EUR)</div><div id="riskOut">-</div></div>
@@ -112,10 +141,13 @@
     <div class="row"><div>TP price</div><div id="tpPriceOut">-</div></div>
   </div>
 
+  <!-- ===== DISCIPLINE (PRO ONLY) ===== -->
   <div class="card">
-    <h3 style="margin:0 0 8px; font-size:14px;">Discipline Mode</h3>
+    <h3 style="margin:0 0 8px; font-size:14px;">Discipline Mode (Pro)</h3>
 
+    <!-- This wrapper gets locked/unlocked by app.js -->
     <div id="proControls" class="lockOverlay">
+
       <div class="grid2">
         <div>
           <label>Daily loss limit (EUR)</label>
@@ -126,26 +158,23 @@
           <input id="todayPnl" type="number" step="0.01" value="0">
         </div>
       </div>
+
       <div class="row"><div>Remaining daily (EUR)</div><div id="remainingDaily">-</div></div>
       <div class="row"><div>Trades left today (est.)</div><div id="tradesLeft">-</div></div>
+
+      <div class="muted" style="margin-top:10px;">
+        Tip: Set your daily limit once, then only update Today PnL.
+      </div>
     </div>
 
-    <div class="proBox">
-      <div class="grid2">
-        <div>
-          <label>Pro code</label>
-          <input id="proCodeInput" placeholder="Enter Pro code">
-        </div>
-        <div style="display:flex; align-items:end;">
-          <button id="unlockBtn">Unlock Pro</button>
-        </div>
-      </div>
-      <div class="muted">Unlock is saved on this device.</div>
+    <div class="muted" style="margin-top:10px;">
+      Locked until you sign in.
     </div>
   </div>
 
 </div>
 
-<script type="module" src="app.js?v=3"></script>
+<!-- IMPORTANT: module script (required for Firebase imports) -->
+<script type="module" src="app.js?v=6"></script>
 </body>
 </html>
