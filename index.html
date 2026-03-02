@@ -3,10 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Universal Risk Calculator</title>
+<title>Prop Risk Tool</title>
+
 <style>
   body { background:#0b0b0c; color:#fff; font-family:Arial, system-ui; margin:0; }
-  .wrap { max-width:950px; margin:auto; padding:18px; }
+  .wrap { max-width:980px; margin:auto; padding:18px; }
   .card { background:#151519; padding:14px; border-radius:14px; margin-bottom:12px; border:1px solid #24242a; }
   label { font-size:12px; opacity:.85; display:block; margin:10px 0 6px; }
   input, select { width:100%; padding:10px; background:#0f0f13; color:#fff; border:1px solid #2c2c35; border-radius:10px; }
@@ -19,16 +20,22 @@
   .switch { display:flex; gap:10px; margin-bottom:12px; }
   .modeBtn { flex:1; padding:10px; background:#1c1c24; border:1px solid #2c2c35; border-radius:12px; cursor:pointer; text-align:center; font-weight:700; }
   .active { background:#2a2a35; }
-  .lockOverlay { opacity:.55; }
+  .pill { display:inline-block; padding:2px 8px; border:1px solid #2c2c35; border-radius:999px; font-size:12px; opacity:.9; }
 </style>
 </head>
 
 <body>
 <div class="wrap">
 
-  <h2 style="margin:6px 0 14px;">Universal Risk Calculator (FX / Gold / Crypto / Indices)</h2>
+  <h2 style="margin:6px 0 14px;">Prop Risk Tool <span class="pill">Engine + Calculator</span></h2>
 
-  <!-- ===== PRO LOGIN (Pro only, Free works without login) ===== -->
+  <!-- MODE SWITCH (UI) -->
+  <div class="switch">
+    <div id="quickModeBtn" class="modeBtn active">Quick</div>
+    <div id="disciplineModeBtn" class="modeBtn">Discipline 🔒</div>
+  </div>
+
+  <!-- LOGIN (PRO REQUIRES LOGIN) -->
   <div class="card">
     <h3 style="margin:0 0 8px; font-size:14px;">Pro Login</h3>
 
@@ -39,7 +46,7 @@
       </div>
       <div>
         <label>Password</label>
-        <input id="password" type="password" placeholder="••••••••">
+        <input id="password" type="password" placeholder="min. 6 chars">
       </div>
     </div>
 
@@ -50,19 +57,12 @@
     </div>
 
     <div class="muted" id="userStatus" style="margin-top:8px;">Not signed in</div>
-    <div class="muted" style="margin-top:6px;">
-      Free works without login. Discipline features unlock after sign-in.
-    </div>
   </div>
 
-  <!-- ===== MODE SWITCH (UI) ===== -->
-  <div class="switch">
-    <div id="quickModeBtn" class="modeBtn active">Quick</div>
-    <div id="disciplineModeBtn" class="modeBtn">Discipline 🔒</div>
-  </div>
-
-  <!-- ===== CALCULATOR (FREE) ===== -->
+  <!-- CALCULATOR -->
   <div class="card">
+    <h3 style="margin:0 0 8px; font-size:14px;">Quick Calculator</h3>
+
     <div class="grid3">
       <div>
         <label>Symbol</label>
@@ -98,19 +98,36 @@
 
     <div class="grid3">
       <div>
-        <label id="slUnitsLabel">SL distance (units)</label>
+        <label>Stop Loss price (recommended)</label>
+        <input id="slPriceIn" type="number" step="0.000001" placeholder="e.g. 1.09450">
+        <div class="muted">Type SL price like in cTrader.</div>
+      </div>
+      <div>
+        <label>Take Profit price (optional)</label>
+        <input id="tpPriceIn" type="number" step="0.000001" placeholder="e.g. 1.11200">
+        <div class="muted">If empty, TP is calculated from RR.</div>
+      </div>
+      <div>
+        <label>TP buffer (price)</label>
+        <input id="tpBuffer" type="number" step="0.00001" value="0">
+      </div>
+    </div>
+
+    <div class="grid3">
+      <div>
+        <label id="slUnitsLabel">SL distance (units) (advanced)</label>
         <input id="slUnits" type="number" step="0.01" value="20">
-        <div class="muted" id="unitsHint"></div>
+        <div class="muted" id="unitsHint">Used only if SL price is empty.</div>
       </div>
       <div>
         <label>Unit size (pip/tick)</label>
         <input id="unitSize" type="number" step="0.00001" value="0.0001">
-        <div class="muted">Editable (manual override)</div>
+        <div class="muted">Editable override</div>
       </div>
       <div>
         <label>Value per unit @ 1 lot (EUR)</label>
         <input id="valuePerUnit" type="number" step="0.0001" value="9.0">
-        <div class="muted">Most important field for accuracy</div>
+        <div class="muted">Most important for accuracy</div>
       </div>
     </div>
 
@@ -119,19 +136,16 @@
         <label>Lot step</label>
         <input id="lotStep" type="number" step="0.001" value="0.01">
       </div>
-      <div>
-        <label>TP buffer (price)</label>
-        <input id="tpBuffer" type="number" step="0.00001" value="0">
-      </div>
       <div style="display:flex; align-items:end;">
         <button id="calcBtn" type="button">Calculate</button>
       </div>
+      <div style="display:flex; align-items:end;">
+        <div class="muted" id="clickStatus"></div>
+      </div>
     </div>
-
-    <div id="clickStatus" class="muted" style="margin-top:8px;"></div>
   </div>
 
-  <!-- ===== RESULTS ===== -->
+  <!-- RESULTS -->
   <div class="card">
     <h3 style="margin:0 0 8px; font-size:14px;">Results</h3>
     <div class="row"><div>Risk (EUR)</div><div id="riskOut">-</div></div>
@@ -141,40 +155,55 @@
     <div class="row"><div>TP price</div><div id="tpPriceOut">-</div></div>
   </div>
 
-  <!-- ===== DISCIPLINE (PRO ONLY) ===== -->
+  <!-- DISCIPLINE + ENGINE (PRO ONLY) -->
   <div class="card">
-    <h3 style="margin:0 0 8px; font-size:14px;">Discipline Mode (Pro)</h3>
+    <h3 style="margin:0 0 8px; font-size:14px;">Prop Survival Engine (Pro)</h3>
 
-    <!-- This wrapper gets locked/unlocked by app.js -->
-    <div id="proControls" class="lockOverlay">
-
-      <div class="grid2">
+    <!-- PRO CONTROLS WRAPPER (gets locked when not logged in) -->
+    <div id="proControls">
+      <div class="grid3">
         <div>
-          <label>Daily loss limit (EUR)</label>
-          <input id="dailyLimit" type="number" step="0.01" value="500">
+          <label>Account size (EUR)</label>
+          <input id="accountSize" type="number" step="0.01" value="10000">
         </div>
         <div>
-          <label>Today PnL (EUR)</label>
-          <input id="todayPnl" type="number" step="0.01" value="0">
+          <label>Daily loss %</label>
+          <input id="dailyLossPct" type="number" step="0.01" value="5">
+        </div>
+        <div>
+          <label>Max loss %</label>
+          <input id="maxLossPct" type="number" step="0.01" value="10">
         </div>
       </div>
 
-      <div class="row"><div>Remaining daily (EUR)</div><div id="remainingDaily">-</div></div>
-      <div class="row"><div>Trades left today (est.)</div><div id="tradesLeft">-</div></div>
+      <div class="grid2">
+        <div>
+          <label>Today PnL (EUR) (e.g. -120 or +80)</label>
+          <input id="todayPnl" type="number" step="0.01" value="0">
+        </div>
+        <div>
+          <label>Total PnL (EUR)</label>
+          <input id="totalPnL" type="number" step="0.01" value="0">
+        </div>
+      </div>
+
+      <div class="row"><div>Remaining Daily (EUR)</div><div id="remainingDailyOut">-</div></div>
+      <div class="row"><div>Remaining Overall (EUR)</div><div id="remainingOverallOut">-</div></div>
+      <div class="row"><div>Trade Status</div><div id="tradeStatusOut">-</div></div>
 
       <div class="muted" style="margin-top:10px;">
-        Tip: Set your daily limit once, then only update Today PnL.
+        If your trade risk is bigger than Remaining Daily/Overall → the engine blocks it.
       </div>
     </div>
 
     <div class="muted" style="margin-top:10px;">
-      Locked until you sign in.
+      Pro unlock = login. (Later we connect Stripe and unlock only paid plan.)
     </div>
   </div>
 
 </div>
 
-<!-- IMPORTANT: module script (required for Firebase imports) -->
-<script type="module" src="app.js?v=6"></script>
+<!-- IMPORTANT: module script (Firebase uses import) -->
+<script type="module" src="app.js?v=12"></script>
 </body>
 </html>
