@@ -1,173 +1,268 @@
-document.addEventListener("DOMContentLoaded", () => {
-  // --------- PRO unlock (simple MVP) ----------
-  const PRO_CODE = "PROP2024";
-  let proUnlocked = localStorage.getItem("proUnlocked") === "true";
+// ===== Firebase CDN (NO npm) =====
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
-  const $ = (id) => document.getElementById(id);
-  const proControls = $("proControls");
-  const disciplineBtn = $("disciplineModeBtn");
+// ===== Your Firebase config =====
+const firebaseConfig = {
+  apiKey: "AIzaSyBo2yXF4Lg-BSTA034dxm8begvAvuO-7iw",
+  authDomain: "prop-risk-tool.firebaseapp.com",
+  projectId: "prop-risk-tool",
+  storageBucket: "prop-risk-tool.firebasestorage.app",
+  messagingSenderId: "205235413030",
+  appId: "1:205235413030:web:8b7fb4ebc86a48e794c6e7"
+};
 
-  function setProUI() {
-    if (proUnlocked) {
-      proControls.style.opacity = "1";
-      proControls.style.pointerEvents = "auto";
-      disciplineBtn.textContent = "Discipline";
-    } else {
-      proControls.style.opacity = "0.55";
-      proControls.style.pointerEvents = "none";
-      disciplineBtn.textContent = "Discipline 🔒";
-    }
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+// ===== Helpers =====
+const $ = (id) => document.getElementById(id);
+
+function n(id) {
+  const el = $(id);
+  const v = el ? parseFloat(el.value) : NaN;
+  return Number.isFinite(v) ? v : 0;
+}
+
+function fmt2(x) {
+  return Number.isFinite(x) ? x.toFixed(2) : "-";
+}
+
+function fmtPrice(x) {
+  if (!Number.isFinite(x)) return "-";
+  const ax = Math.abs(x);
+  const d = ax >= 100 ? 2 : ax >= 1 ? 4 : 6;
+  return x.toFixed(d);
+}
+
+function roundDownStep(value, step) {
+  if (!Number.isFinite(value) || !Number.isFinite(step) || step <= 0) return 0;
+  return Math.floor(value / step) * step;
+}
+
+// ===== PRO gating (Login = Pro) =====
+let isPro = false;
+
+function setProUI() {
+  const proControls = $("proControls");         // discipline content wrapper (you already have)
+  const discBtn = $("disciplineModeBtn");       // button/tab (you already have)
+
+  if (proControls) {
+    proControls.style.opacity = isPro ? "1" : "0.55";
+    proControls.style.pointerEvents = isPro ? "auto" : "none";
   }
-  setProUI();
+  if (discBtn) {
+    discBtn.textContent = isPro ? "Discipline" : "Discipline 🔒";
+  }
+}
 
-  $("unlockBtn").addEventListener("click", () => {
-    const code = ($("proCodeInput").value || "").trim();
-    if (code === PRO_CODE) {
-      proUnlocked = true;
-      localStorage.setItem("proUnlocked", "true");
-      $("clickStatus").textContent = "Pro unlocked ✅";
-      setProUI();
-      calculate();
-    } else {
-      alert("Invalid code");
-    }
-  });
+// ===== Universal symbol defaults (editable) =====
+// valuePerUnit is in EUR per 1 unit (pip/tick/point) at 1.00 lot.
+// User can override in the inputs.
+const symbols = {
+  "EURUSD": { asset: "FX", unitName: "pips", unitSize: 0.0001, valuePerUnit: 9.0, lotStep: 0.01 },
+  "GBPUSD": { asset: "FX", unitName: "pips", unitSize: 0.0001, valuePerUnit: 9.0, lotStep: 0.01 },
+  "USDJPY": { asset: "FX", unitName: "pips", unitSize: 0.01,   valuePerUnit: 7.0, lotStep: 0.01 },
 
-  // --------- MODE switch (UI only) ----------
-  $("quickModeBtn").addEventListener("click", () => {
-    $("quickModeBtn").classList.add("active");
-    $("disciplineModeBtn").classList.remove("active");
-  });
-  $("disciplineModeBtn").addEventListener("click", () => {
-    $("disciplineModeBtn").classList.add("active");
-    $("quickModeBtn").classList.remove("active");
-  });
+  "XAUUSD": { asset: "Gold", unitName: "ticks", unitSize: 0.01, valuePerUnit: 0.91, lotStep: 0.01 },
 
-  // --------- SYMBOL DATABASE (editable defaults) ----------
-  // valuePerUnit is in EUR per 1 unit (pip/tick/point) at 1.00 lot.
-  // These are reasonable defaults; user can override per symbol.
-  const symbols = {
-    // FX (USD quote) -> typical EUR account pip value around 9-ish depending on EURUSD
-    "EURUSD": { asset: "FX", unitName: "pips", unitSize: 0.0001, valuePerUnit: 9.0, lotStep: 0.01 },
-    "GBPUSD": { asset: "FX", unitName: "pips", unitSize: 0.0001, valuePerUnit: 9.0, lotStep: 0.01 },
-    "USDJPY": { asset: "FX", unitName: "pips", unitSize: 0.01,   valuePerUnit: 7.0, lotStep: 0.01 },
+  "BTCUSD": { asset: "Crypto", unitName: "ticks", unitSize: 1,  valuePerUnit: 0.90, lotStep: 0.001 },
+  "ETHUSD": { asset: "Crypto", unitName: "ticks", unitSize: 0.1, valuePerUnit: 0.09, lotStep: 0.01 },
 
-    // Gold (very broker-dependent) – keep editable
-    // If XAUUSD $1 move per 1 lot ≈ $100 and EURUSD ~1.10 => ~€90.9 per $1
-    "XAUUSD": { asset: "Gold", unitName: "ticks", unitSize: 0.01, valuePerUnit: 0.91, lotStep: 0.01, note: "ticks here = $0.01; value per tick depends on contract" },
+  "NAS100": { asset: "Index", unitName: "points", unitSize: 1, valuePerUnit: 0.90, lotStep: 0.01 },
+  "US30":   { asset: "Index", unitName: "points", unitSize: 1, valuePerUnit: 0.90, lotStep: 0.01 },
+  "DE40":   { asset: "Index", unitName: "points", unitSize: 1, valuePerUnit: 1.00, lotStep: 0.01 }
+};
 
-    // Crypto (broker-dependent). If 1 lot = 1 BTC and tick = $1 then value per tick ~ $1 => ~€0.9
-    "BTCUSD": { asset: "Crypto", unitName: "ticks", unitSize: 1, valuePerUnit: 0.90, lotStep: 0.001 },
-    "ETHUSD": { asset: "Crypto", unitName: "ticks", unitSize: 0.1, valuePerUnit: 0.09, lotStep: 0.01 },
+function populateSymbols() {
+  const sel = $("symbol");
+  if (!sel) return;
 
-    // Indices (examples; must be set to your contract)
-    "NAS100": { asset: "Index", unitName: "points", unitSize: 1, valuePerUnit: 0.90, lotStep: 0.01 },
-    "US30":   { asset: "Index", unitName: "points", unitSize: 1, valuePerUnit: 0.90, lotStep: 0.01 },
-    "DE40":   { asset: "Index", unitName: "points", unitSize: 1, valuePerUnit: 1.00, lotStep: 0.01 }
-  };
+  // If it's already populated, don't duplicate
+  if (sel.options && sel.options.length > 0) return;
 
-  // Populate dropdown
-  const symbolSelect = $("symbol");
   Object.keys(symbols).forEach((k) => {
     const opt = document.createElement("option");
     opt.value = k;
     opt.textContent = `${k} (${symbols[k].asset})`;
-    symbolSelect.appendChild(opt);
-  });
-  symbolSelect.value = "EURUSD";
-
-  function n(id) {
-    const v = parseFloat($(id)?.value);
-    return Number.isFinite(v) ? v : 0;
-  }
-  function fmt2(x) { return Number.isFinite(x) ? x.toFixed(2) : "-"; }
-  function fmtPrice(x) {
-    if (!Number.isFinite(x)) return "-";
-    const ax = Math.abs(x);
-    const d = ax >= 100 ? 2 : ax >= 1 ? 4 : 6;
-    return x.toFixed(d);
-  }
-  function roundDownStep(value, step) {
-    if (!Number.isFinite(value) || !Number.isFinite(step) || step <= 0) return 0;
-    return Math.floor(value / step) * step;
-  }
-
-  function applySymbolDefaults(sym) {
-    const cfg = symbols[sym];
-    if (!cfg) return;
-
-    $("slUnitsLabel").textContent = `SL distance (${cfg.unitName})`;
-    $("unitsHint").textContent = `Units = ${cfg.unitName}. You can override any field below.`;
-    $("unitSize").value = cfg.unitSize;
-    $("valuePerUnit").value = cfg.valuePerUnit;
-    $("lotStep").value = cfg.lotStep;
-  }
-
-  $("symbol").addEventListener("change", () => {
-    applySymbolDefaults($("symbol").value);
-    calculate();
+    sel.appendChild(opt);
   });
 
-  function calculate() {
-    const sym = $("symbol").value;
-    const cfg = symbols[sym];
+  if (!sel.value) sel.value = "EURUSD";
+}
 
-    const balance = n("balance");
-    const riskPct = n("riskPct");
-    const entry = n("entry");
-    const slUnits = n("slUnits");
-    const rr = n("rr");
-    const unitSize = n("unitSize");
-    const valuePerUnit = n("valuePerUnit");
-    const lotStep = n("lotStep");
-    const tpBuffer = n("tpBuffer");
-    const dir = $("direction").value;
+function applySymbolDefaults(sym) {
+  const cfg = symbols[sym];
+  if (!cfg) return;
 
-    const riskMoney = balance * (riskPct / 100);
-    const lossPerLot = slUnits * valuePerUnit;
+  if ($("slUnitsLabel")) $("slUnitsLabel").textContent = `SL distance (${cfg.unitName})`;
+  if ($("unitsHint")) $("unitsHint").textContent = `Units = ${cfg.unitName}. You can override any field below.`;
 
-    const lotsRaw = lossPerLot > 0 ? (riskMoney / lossPerLot) : 0;
-    const lots = roundDownStep(lotsRaw, lotStep);
+  if ($("unitSize")) $("unitSize").value = cfg.unitSize;
+  if ($("valuePerUnit")) $("valuePerUnit").value = cfg.valuePerUnit;
+  if ($("lotStep")) $("lotStep").value = cfg.lotStep;
+}
 
-    // price distances
-    const slPriceDist = slUnits * unitSize;
-    const slPrice = dir === "LONG" ? entry - slPriceDist : entry + slPriceDist;
-    const tpDist = slPriceDist * rr;
-    const tpBase = dir === "LONG" ? entry + tpDist : entry - tpDist;
-    const tpPrice = dir === "LONG" ? tpBase - tpBuffer : tpBase + tpBuffer;
+function calculate() {
+  // IDs based on your Universal Risk Calculator page
+  const sym = $("symbol") ? $("symbol").value : "EURUSD";
+  const cfg = symbols[sym] || { asset: "", unitName: "units" };
 
-    $("riskOut").textContent = fmt2(riskMoney);
-    $("lossPerLotOut").textContent = fmt2(lossPerLot);
-    $("lotsOut").textContent = lots > 0 ? lots.toFixed(3).replace(/0+$/,'').replace(/\.$/,'') : "-";
-    $("slPriceOut").textContent = fmtPrice(slPrice);
-    $("tpPriceOut").textContent = fmtPrice(tpPrice);
+  const balance = n("balance");
+  const riskPct = n("riskPct");
+  const entry = n("entry");
+  const slUnits = n("slUnits");
+  const rr = n("rr") || 2;
 
-    // Discipline (Pro)
-    if (proUnlocked) {
-      const dailyLimit = n("dailyLimit");
-      const todayPnl = n("todayPnl");
-      const remaining = dailyLimit + todayPnl;
-      $("remainingDaily").textContent = fmt2(remaining);
-      const tradesLeft = riskMoney > 0 ? Math.max(0, Math.floor(remaining / riskMoney)) : 0;
-      $("tradesLeft").textContent = String(tradesLeft);
-    } else {
-      $("remainingDaily").textContent = "-";
-      $("tradesLeft").textContent = "-";
+  const unitSize = n("unitSize");
+  const valuePerUnit = n("valuePerUnit");
+  const lotStep = n("lotStep") || 0.01;
+  const tpBuffer = n("tpBuffer");
+
+  const dir = $("direction") ? $("direction").value : "LONG";
+
+  const riskMoney = balance * (riskPct / 100);
+  const lossPerLot = slUnits * valuePerUnit;
+
+  const lotsRaw = lossPerLot > 0 ? (riskMoney / lossPerLot) : 0;
+  const lots = roundDownStep(lotsRaw, lotStep);
+
+  // price distances
+  const slPriceDist = slUnits * unitSize;
+  const slPrice = dir === "LONG" ? entry - slPriceDist : entry + slPriceDist;
+
+  const tpDist = slPriceDist * rr;
+  const tpBase = dir === "LONG" ? entry + tpDist : entry - tpDist;
+  const tpPrice = dir === "LONG" ? tpBase - tpBuffer : tpBase + tpBuffer;
+
+  if ($("riskOut")) $("riskOut").textContent = fmt2(riskMoney);
+  if ($("lossPerLotOut")) $("lossPerLotOut").textContent = fmt2(lossPerLot);
+  if ($("lotsOut")) $("lotsOut").textContent = lots > 0 ? lots.toFixed(3).replace(/0+$/,'').replace(/\.$/,'') : "-";
+  if ($("slPriceOut")) $("slPriceOut").textContent = fmtPrice(slPrice);
+  if ($("tpPriceOut")) $("tpPriceOut").textContent = fmtPrice(tpPrice);
+
+  // Discipline (Pro only)
+  if (isPro) {
+    const dailyLimit = n("dailyLimit");
+    const todayPnl = n("todayPnl");
+    const remaining = dailyLimit + todayPnl;
+
+    if ($("remainingDaily")) $("remainingDaily").textContent = fmt2(remaining);
+    const tradesLeft = riskMoney > 0 ? Math.max(0, Math.floor(remaining / riskMoney)) : 0;
+    if ($("tradesLeft")) $("tradesLeft").textContent = String(tradesLeft);
+  } else {
+    if ($("remainingDaily")) $("remainingDaily").textContent = "-";
+    if ($("tradesLeft")) $("tradesLeft").textContent = "-";
+  }
+
+  if ($("clickStatus")) $("clickStatus").textContent = `Calculated ✅ (${sym}${cfg.asset ? " / " + cfg.asset : ""})`;
+}
+
+// ===== Login wiring =====
+function wireLoginUI() {
+  const email = $("email");
+  const password = $("password");
+  const signUpBtn = $("signUpBtn");
+  const signInBtn = $("signInBtn");
+  const signOutBtn = $("signOutBtn");
+  const userStatus = $("userStatus");
+
+  if (signUpBtn) {
+    signUpBtn.addEventListener("click", async () => {
+      try {
+        await createUserWithEmailAndPassword(auth, (email?.value || "").trim(), password?.value || "");
+      } catch (e) {
+        alert(e.message);
+      }
+    });
+  }
+
+  if (signInBtn) {
+    signInBtn.addEventListener("click", async () => {
+      try {
+        await signInWithEmailAndPassword(auth, (email?.value || "").trim(), password?.value || "");
+      } catch (e) {
+        alert(e.message);
+      }
+    });
+  }
+
+  if (signOutBtn) {
+    signOutBtn.addEventListener("click", async () => {
+      try {
+        await signOut(auth);
+      } catch (e) {
+        alert(e.message);
+      }
+    });
+  }
+
+  onAuthStateChanged(auth, (user) => {
+    isPro = !!user;
+
+    if (userStatus) {
+      userStatus.textContent = user ? `Signed in: ${user.email}` : "Not signed in";
     }
 
-    $("clickStatus").textContent = `Calculated ✅ (${sym}${cfg?.asset ? " / " + cfg.asset : ""})`;
-  }
-
-  $("calcBtn").addEventListener("click", (e) => {
-    e.preventDefault();
+    setProUI();
+    // refresh discipline outputs
     calculate();
   });
+}
 
-  // Auto-calc on input changes
-  ["balance","riskPct","entry","slUnits","rr","unitSize","valuePerUnit","lotStep","tpBuffer","direction","dailyLimit","todayPnl"]
-    .forEach(id => $(id).addEventListener("input", calculate));
+// ===== UI wiring =====
+function wireCalculatorUI() {
+  populateSymbols();
 
-  // Init
-  applySymbolDefaults("EURUSD");
+  if ($("symbol")) {
+    $("symbol").addEventListener("change", () => {
+      applySymbolDefaults($("symbol").value);
+      calculate();
+    });
+    // apply initial defaults
+    applySymbolDefaults($("symbol").value || "EURUSD");
+  }
+
+  if ($("calcBtn")) {
+    $("calcBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      calculate();
+    });
+  }
+
+  // auto-calc on input changes
+  [
+    "balance","riskPct","entry","slUnits","rr","unitSize","valuePerUnit","lotStep","tpBuffer","direction",
+    "dailyLimit","todayPnl"
+  ].forEach((id) => {
+    const el = $(id);
+    if (el) el.addEventListener("input", () => calculate());
+  });
+
+  // quick / discipline buttons (optional UI)
+  if ($("quickModeBtn") && $("disciplineModeBtn")) {
+    $("quickModeBtn").addEventListener("click", () => {
+      $("quickModeBtn").classList.add("active");
+      $("disciplineModeBtn").classList.remove("active");
+    });
+    $("disciplineModeBtn").addEventListener("click", () => {
+      $("disciplineModeBtn").classList.add("active");
+      $("quickModeBtn").classList.remove("active");
+    });
+  }
+
+  // init UI
+  setProUI();
   calculate();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  wireLoginUI();
+  wireCalculatorUI();
 });
