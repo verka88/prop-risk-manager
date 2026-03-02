@@ -1,85 +1,77 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Prop Risk Manager 10K (FX)</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prop Risk Tool</title>
 
-  <style>
-    body { font-family: Arial; background:#0b0b0c; color:#f2f2f2; margin:0; }
-    .wrap { max-width: 800px; margin:auto; padding:20px; }
-    .card { background:#151519; padding:15px; border-radius:12px; margin-bottom:15px; }
-    input, select { width:100%; padding:8px; margin-top:5px; margin-bottom:10px; background:#111; color:#fff; border:1px solid #333; border-radius:6px; }
-    button { width:100%; padding:10px; background:#1c1c24; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold; }
-    .row { display:flex; justify-content:space-between; padding:6px 0; }
-  </style>
+<style>
+body { background:#0b0b0c; color:#fff; font-family:Arial; margin:0; }
+.wrap { max-width:800px; margin:auto; padding:20px; }
+.card { background:#151519; padding:15px; border-radius:12px; margin-bottom:15px; }
+input, select { width:100%; padding:8px; margin-top:5px; margin-bottom:10px; background:#111; color:#fff; border:1px solid #333; border-radius:6px; }
+button { width:100%; padding:10px; background:#1c1c24; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold; }
+.row { display:flex; justify-content:space-between; padding:6px 0; }
+.lock { opacity:0.5; pointer-events:none; }
+.switch { display:flex; gap:10px; margin-bottom:15px; }
+.modeBtn { flex:1; padding:8px; background:#222; border-radius:6px; cursor:pointer; text-align:center; }
+.active { background:#444; }
+</style>
 </head>
-<body>
 
+<body>
 <div class="wrap">
 
-<h2>Prop Risk Manager 10K (FX)</h2>
+<h2>Prop Risk Tool</h2>
 
-<div class="card">
-  <h3>Account Limits</h3>
-
-  <label>Start Balance</label>
-  <input id="startBalance" type="number" value="10000">
-
-  <label>Current Balance</label>
-  <input id="currentBalance" type="number" value="10000">
-
-  <label>Daily %</label>
-  <input id="dailyPct" type="number" value="5">
-
-  <label>Max %</label>
-  <input id="maxPct" type="number" value="10">
+<div class="switch">
+  <div id="quickModeBtn" class="modeBtn active">Quick</div>
+  <div id="disciplineModeBtn" class="modeBtn">Discipline 🔒</div>
 </div>
 
 <div class="card">
-  <h3>Trade Calculation</h3>
-
-  <label>Pair</label>
-  <select id="pair">
-    <option>EURUSD</option>
-    <option>GBPUSD</option>
-    <option>USDJPY</option>
-  </select>
-
-  <label>Direction</label>
-  <select id="dir">
-    <option>LONG</option>
-    <option>SHORT</option>
-  </select>
+  <label>Balance</label>
+  <input id="balance" type="number" value="10000">
 
   <label>Risk %</label>
-  <select id="riskPct">
-    <option value="0.25">0.25%</option>
-    <option value="0.5" selected>0.5%</option>
-    <option value="1">1%</option>
-  </select>
+  <input id="riskPct" type="number" value="0.5">
 
-  <label>Entry Price</label>
+  <label>Entry</label>
   <input id="entry" type="number" value="1.1000">
 
-  <label>Stop (pips)</label>
-  <input id="stopPips" type="number" value="20">
+  <label>Stop (pips for FX / price for crypto)</label>
+  <input id="stopValue" type="number" value="20">
 
   <button id="calcBtn">Calculate</button>
-  <div id="clickStatus" style="margin-top:8px;font-size:12px;"></div>
 </div>
 
 <div class="card">
-  <h3>Results</h3>
+  <div class="row"><div>Risk €</div><div id="riskOut">-</div></div>
+  <div class="row"><div>Lot / Position Size</div><div id="sizeOut">-</div></div>
+</div>
+
+<div id="disciplineSection" class="card lock">
+  <h3>Discipline Mode</h3>
+
+  <label>Daily Loss Limit €</label>
+  <input id="dailyLimit" type="number" value="500">
+
+  <label>Today PnL €</label>
+  <input id="todayPnL" type="number" value="0">
 
   <div class="row">
-    <div>Risk €</div>
-    <div id="riskEur">-</div>
+    <div>Remaining Daily</div>
+    <div id="remainingDaily">-</div>
   </div>
 
   <div class="row">
-    <div>Lot Size</div>
-    <div id="lots">-</div>
+    <div>Trades Left (est.)</div>
+    <div id="tradesLeft">-</div>
+  </div>
+
+  <div style="margin-top:10px;">
+    <input id="proCodeInput" placeholder="Enter Pro Code">
+    <button id="unlockBtn">Unlock Pro</button>
   </div>
 </div>
 
