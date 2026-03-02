@@ -27,15 +27,14 @@
 <body>
 <div class="wrap">
 
-  <h2 style="margin:6px 0 14px;">Prop Risk Tool <span class="pill">Engine + Calculator</span></h2>
+  <h2 style="margin:6px 0 14px;">Prop Risk Tool <span class="pill">Shows pips + price</span></h2>
 
-  <!-- MODE SWITCH (UI) -->
   <div class="switch">
     <div id="quickModeBtn" class="modeBtn active">Quick</div>
     <div id="disciplineModeBtn" class="modeBtn">Discipline 🔒</div>
   </div>
 
-  <!-- LOGIN (PRO REQUIRES LOGIN) -->
+  <!-- LOGIN -->
   <div class="card">
     <h3 style="margin:0 0 8px; font-size:14px;">Pro Login</h3>
 
@@ -76,7 +75,7 @@
         </select>
       </div>
       <div>
-        <label>RR (R multiple)</label>
+        <label>RR (if TP units empty)</label>
         <input id="rr" type="number" step="0.1" value="2">
       </div>
     </div>
@@ -98,27 +97,25 @@
 
     <div class="grid3">
       <div>
-        <label>Stop Loss price (recommended)</label>
-        <input id="slPriceIn" type="number" step="0.000001" placeholder="e.g. 1.09450">
-        <div class="muted">Type SL price like in cTrader.</div>
+        <label id="slUnitsLabel">SL (pips/ticks)</label>
+        <input id="slUnits" type="number" step="0.01" value="15">
+        <div class="muted">Example: SL = 15 pips</div>
       </div>
+
       <div>
-        <label>Take Profit price (optional)</label>
-        <input id="tpPriceIn" type="number" step="0.000001" placeholder="e.g. 1.11200">
-        <div class="muted">If empty, TP is calculated from RR.</div>
+        <label id="tpUnitsLabel">TP (pips/ticks)</label>
+        <input id="tpUnits" type="number" step="0.01" value="30">
+        <div class="muted">Example: TP = 30 pips (or leave empty)</div>
       </div>
+
       <div>
         <label>TP buffer (price)</label>
         <input id="tpBuffer" type="number" step="0.00001" value="0">
+        <div class="muted">Optional</div>
       </div>
     </div>
 
     <div class="grid3">
-      <div>
-        <label id="slUnitsLabel">SL distance (units) (advanced)</label>
-        <input id="slUnits" type="number" step="0.01" value="20">
-        <div class="muted" id="unitsHint">Used only if SL price is empty.</div>
-      </div>
       <div>
         <label>Unit size (pip/tick)</label>
         <input id="unitSize" type="number" step="0.00001" value="0.0001">
@@ -129,19 +126,20 @@
         <input id="valuePerUnit" type="number" step="0.0001" value="9.0">
         <div class="muted">Most important for accuracy</div>
       </div>
-    </div>
-
-    <div class="grid3">
       <div>
         <label>Lot step</label>
         <input id="lotStep" type="number" step="0.001" value="0.01">
       </div>
+    </div>
+
+    <div class="grid3">
       <div style="display:flex; align-items:end;">
         <button id="calcBtn" type="button">Calculate</button>
       </div>
       <div style="display:flex; align-items:end;">
         <div class="muted" id="clickStatus"></div>
       </div>
+      <div></div>
     </div>
   </div>
 
@@ -151,15 +149,20 @@
     <div class="row"><div>Risk (EUR)</div><div id="riskOut">-</div></div>
     <div class="row"><div>Loss per 1 lot (EUR)</div><div id="lossPerLotOut">-</div></div>
     <div class="row"><div>Position size (lots)</div><div id="lotsOut">-</div></div>
+
+    <!-- NEW: show distances FIRST (what you wanted) -->
+    <div class="row"><div>SL distance (pips/ticks)</div><div id="slUnitsOut">-</div></div>
+    <div class="row"><div>TP distance (pips/ticks)</div><div id="tpUnitsOut">-</div></div>
+
+    <!-- still show price too -->
     <div class="row"><div>SL price</div><div id="slPriceOut">-</div></div>
     <div class="row"><div>TP price</div><div id="tpPriceOut">-</div></div>
   </div>
 
-  <!-- DISCIPLINE + ENGINE (PRO ONLY) -->
+  <!-- PROP ENGINE (PRO) -->
   <div class="card">
     <h3 style="margin:0 0 8px; font-size:14px;">Prop Survival Engine (Pro)</h3>
 
-    <!-- PRO CONTROLS WRAPPER (gets locked when not logged in) -->
     <div id="proControls">
       <div class="grid3">
         <div>
@@ -203,7 +206,6 @@
 
 </div>
 
-<!-- IMPORTANT: module script (Firebase uses import) -->
-<script type="module" src="app.js?v=12"></script>
+<script type="module" src="app.js?v=14"></script>
 </body>
 </html>
