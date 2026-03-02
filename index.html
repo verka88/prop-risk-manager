@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Prop Risk Tool</title>
+<title>Pro Challenge Risk Tool</title>
 
 <style>
   body { background:#0b0b0c; color:#fff; font-family:Arial, system-ui; margin:0; }
@@ -36,9 +36,8 @@
 <body>
 <div class="wrap">
 
-  <h2 style="margin:6px 0 14px;">Prop Risk Tool <span class="pill">Shows pips + price</span></h2>
+  <h2 style="margin:6px 0 14px;">Pro Challenge Risk Tool <span class="pill">Shows units + price</span></h2>
 
-  <!-- ✅ FIX: real buttons (not div) -->
   <div class="switch">
     <button id="quickModeBtn" type="button" class="modeBtn active">Quick</button>
     <button id="disciplineModeBtn" type="button" class="modeBtn">Discipline 🔒</button>
@@ -110,13 +109,13 @@
       <div>
         <label id="slUnitsLabel">SL (pips/ticks)</label>
         <input id="slUnits" type="text" inputmode="decimal" value="15">
-        <div class="muted">Example: SL = 15 pips</div>
+        <div class="muted">Example: SL = 15 units</div>
       </div>
 
       <div>
         <label id="tpUnitsLabel">TP (pips/ticks)</label>
         <input id="tpUnits" type="text" inputmode="decimal" value="30">
-        <div class="muted">Example: TP = 30 pips (or leave empty)</div>
+        <div class="muted">Example: TP = 30 units (or leave empty)</div>
       </div>
 
       <div>
@@ -196,11 +195,9 @@
     <div class="row"><div>Loss per 1 lot (EUR)</div><div id="lossPerLotOut">-</div></div>
     <div class="row"><div>Position size (lots)</div><div id="lotsOut">-</div></div>
 
-    <!-- show distances FIRST -->
-    <div class="row"><div>SL distance (pips/ticks)</div><div id="slUnitsOut">-</div></div>
-    <div class="row"><div>TP distance (pips/ticks)</div><div id="tpUnitsOut">-</div></div>
+    <div class="row"><div>SL distance (units)</div><div id="slUnitsOut">-</div></div>
+    <div class="row"><div>TP distance (units)</div><div id="tpUnitsOut">-</div></div>
 
-    <!-- still show price too -->
     <div class="row"><div>SL price</div><div id="slPriceOut">-</div></div>
     <div class="row"><div>TP price</div><div id="tpPriceOut">-</div></div>
 
@@ -211,16 +208,15 @@
     </div>
   </div>
 
-  <!-- PROP ENGINE (PRO) -->
+  <!-- CHALLENGE ENGINE (PRO) -->
   <div class="card">
-    <h3 style="margin:0 0 8px; font-size:14px;">Prop Survival Engine (Pro)</h3>
+    <h3 style="margin:0 0 8px; font-size:14px;">Prop Challenge Engine (Pro)</h3>
 
-    <!-- ✅ NEW: preset buttons -->
     <div class="btnRow" style="margin-bottom:10px;">
-      <button id="presetFTMO10K" type="button">FTMO 10K</button>
-      <button id="presetFTMO25K" type="button">FTMO 25K</button>
-      <button id="presetFTMO50K" type="button">FTMO 50K</button>
-      <button id="presetFTMO100K" type="button">FTMO 100K</button>
+      <button id="presetChallenge10K" type="button">Challenge 10K</button>
+      <button id="presetChallenge25K" type="button">Challenge 25K</button>
+      <button id="presetChallenge50K" type="button">Challenge 50K</button>
+      <button id="presetChallenge100K" type="button">Challenge 100K</button>
     </div>
 
     <div id="proControls">
@@ -260,13 +256,13 @@
     </div>
 
     <div class="muted" style="margin-top:10px;">
-      Pro unlock = login. (Later we connect Stripe and unlock only paid plan.)
+      Pro unlock = login. (Later you can connect payments and unlock only paid plans.)
     </div>
   </div>
 
 </div>
 
 <!-- bump version to bust cache -->
-<script type="module" src="app.js?v=99"></script>
+<script type="module" src="app.js?v=200"></script>
 </body>
 </html>
