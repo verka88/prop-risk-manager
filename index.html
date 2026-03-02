@@ -1,180 +1,251 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Universal Risk Calculator</title>
-<style>
-  body { background:#0b0b0c; color:#fff; font-family:Arial, system-ui; margin:0; }
-  .wrap { max-width:950px; margin:auto; padding:18px; }
-  .card { background:#151519; padding:14px; border-radius:14px; margin-bottom:12px; border:1px solid #24242a; }
-  label { font-size:12px; opacity:.85; display:block; margin:10px 0 6px; }
-  input, select { width:100%; padding:10px; background:#0f0f13; color:#fff; border:1px solid #2c2c35; border-radius:10px; }
-  button { width:100%; padding:12px; background:#1c1c24; color:white; border:1px solid #2c2c35; border-radius:12px; cursor:pointer; font-weight:700; }
-  .row { display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid #24242a; }
-  .row:last-child { border-bottom:0; }
-  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
-  .muted { font-size:12px; opacity:.75; line-height:1.35; }
-  .switch { display:flex; gap:10px; margin-bottom:12px; }
-  .modeBtn { flex:1; padding:10px; background:#1c1c24; border:1px solid #2c2c35; border-radius:12px; cursor:pointer; text-align:center; font-weight:700; }
-  .active { background:#2a2a35; }
-  .lockOverlay { opacity:.55; }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prop Risk Tool</title>
+
+  <meta name="theme-color" content="#0b0b0c" />
+  <link rel="manifest" href="manifest.json" />
+
+  <style>
+    :root{
+      --bg:#0b0b0c; --card:#151519; --card2:#101014; --text:#fff; --muted:rgba(255,255,255,.72);
+      --border:rgba(255,255,255,.10); --accent:#2b8cff; --danger:#ff4d4d; --ok:#1ed760;
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,system-ui,-apple-system,Segoe UI,Roboto}
+    .wrap{max-width:1100px;margin:0 auto;padding:18px}
+    h1{margin:4px 0 14px;font-size:28px}
+    .tabs{display:flex;gap:10px;margin:10px 0 16px}
+    .tabBtn{
+      flex:1;padding:12px 14px;border:1px solid var(--border);background:var(--card2);
+      color:var(--text);border-radius:14px;font-weight:700;cursor:pointer;opacity:.9
+    }
+    .tabBtn.active{background:#1c1c24;border-color:rgba(255,255,255,.18);opacity:1}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+    @media (max-width:900px){ .grid3{grid-template-columns:1fr} .grid2{grid-template-columns:1fr} }
+    .card{
+      background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+      padding:16px; box-shadow:0 10px 24px rgba(0,0,0,.25)
+    }
+    .row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+    .row:last-child{border-bottom:0}
+    label{display:block;font-size:12px;opacity:.85;margin:0 0 6px}
+    input,select{
+      width:100%;padding:12px 12px;border-radius:14px;border:1px solid var(--border);
+      background:#0f0f13;color:var(--text);outline:none
+    }
+    input:focus,select:focus{border-color:rgba(43,140,255,.55)}
+    .btn{
+      width:100%;padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,.14);
+      background:#1c1c24;color:#fff;font-weight:800;cursor:pointer
+    }
+    .btn.primary{background:var(--accent);border-color:rgba(43,140,255,.55)}
+    .btn.danger{background:#2a1b1b;border-color:rgba(255,77,77,.35)}
+    .muted{color:var(--muted);font-size:12px;line-height:1.35}
+    .pill{display:inline-flex;align-items:center;gap:8px;padding:7px 10px;border-radius:999px;
+      border:1px solid var(--border);background:#0f0f13;font-size:12px}
+    .ok{color:var(--ok);font-weight:800}
+    .bad{color:var(--danger);font-weight:800}
+    .lock{
+      opacity:.55; pointer-events:none; filter:saturate(.7);
+    }
+    .tiny{font-size:11px;opacity:.8}
+    .spacer{height:12px}
+  </style>
 </head>
 
 <body>
-<div class="wrap">
+  <div class="wrap">
+    <h1>Prop Risk Tool</h1>
 
-  <h2 style="margin:6px 0 14px;">Universal Risk Calculator (FX / Gold / Crypto / Indices)</h2>
-
-  <!-- ===== PRO LOGIN (Pro only, Free works without login) ===== -->
-  <div class="card">
-    <h3 style="margin:0 0 8px; font-size:14px;">Pro Login</h3>
-
-    <div class="grid2">
-      <div>
-        <label>Email</label>
-        <input id="email" type="email" placeholder="you@email.com">
-      </div>
-      <div>
-        <label>Password</label>
-        <input id="password" type="password" placeholder="••••••••">
-      </div>
+    <div class="tabs">
+      <button class="tabBtn active" id="tabQuick">Quick</button>
+      <button class="tabBtn" id="tabDiscipline">Discipline (Pro)</button>
     </div>
 
-    <div class="grid3" style="margin-top:10px;">
-      <button id="signUpBtn" type="button">Create account</button>
-      <button id="signInBtn" type="button">Sign in</button>
-      <button id="signOutBtn" type="button">Sign out</button>
-    </div>
+    <!-- QUICK -->
+    <div class="card" id="quickCard">
+      <div class="grid3">
+        <div>
+          <label>Symbol</label>
+          <select id="symbol"></select>
+          <div class="spacer"></div>
+          <div class="pill"><span>Mode:</span> <b id="symbolType">—</b></div>
+        </div>
 
-    <div class="muted" id="userStatus" style="margin-top:8px;">Not signed in</div>
-    <div class="muted" style="margin-top:6px;">
-      Free works without login. Discipline features unlock after sign-in.
-    </div>
-  </div>
+        <div>
+          <label>Direction</label>
+          <select id="direction">
+            <option value="LONG">LONG</option>
+            <option value="SHORT">SHORT</option>
+          </select>
 
-  <!-- ===== MODE SWITCH (UI) ===== -->
-  <div class="switch">
-    <div id="quickModeBtn" class="modeBtn active">Quick</div>
-    <div id="disciplineModeBtn" class="modeBtn">Discipline 🔒</div>
-  </div>
+          <div class="spacer"></div>
 
-  <!-- ===== CALCULATOR (FREE) ===== -->
-  <div class="card">
-    <div class="grid3">
-      <div>
-        <label>Symbol</label>
-        <select id="symbol"></select>
-      </div>
-      <div>
-        <label>Direction</label>
-        <select id="direction">
-          <option value="LONG">LONG</option>
-          <option value="SHORT">SHORT</option>
-        </select>
-      </div>
-      <div>
-        <label>RR (R multiple)</label>
-        <input id="rr" type="number" step="0.1" value="2">
-      </div>
-    </div>
+          <label>RR (R multiple)</label>
+          <input id="rr" inputmode="decimal" value="2" />
+          <div class="tiny">Example: RR=2 means TP distance = SL distance × 2</div>
+        </div>
 
-    <div class="grid3">
-      <div>
-        <label>Balance (EUR)</label>
-        <input id="balance" type="number" step="0.01" value="10000">
-      </div>
-      <div>
-        <label>Risk %</label>
-        <input id="riskPct" type="number" step="0.01" value="0.5">
-      </div>
-      <div>
-        <label>Entry price</label>
-        <input id="entry" type="number" step="0.00001" value="1.10000">
-      </div>
-    </div>
+        <div>
+          <label>Balance (EUR)</label>
+          <input id="balance" inputmode="decimal" value="10000" />
 
-    <div class="grid3">
-      <div>
-        <label id="slUnitsLabel">SL distance (units)</label>
-        <input id="slUnits" type="number" step="0.01" value="20">
-        <div class="muted" id="unitsHint"></div>
-      </div>
-      <div>
-        <label>Unit size (pip/tick)</label>
-        <input id="unitSize" type="number" step="0.00001" value="0.0001">
-        <div class="muted">Editable (manual override)</div>
-      </div>
-      <div>
-        <label>Value per unit @ 1 lot (EUR)</label>
-        <input id="valuePerUnit" type="number" step="0.0001" value="9.0">
-        <div class="muted">Most important field for accuracy</div>
-      </div>
-    </div>
+          <div class="spacer"></div>
 
-    <div class="grid3">
-      <div>
-        <label>Lot step</label>
-        <input id="lotStep" type="number" step="0.001" value="0.01">
+          <label>Risk %</label>
+          <input id="riskPct" inputmode="decimal" value="0,5" />
+          <div class="tiny">Comma supported (0,5)</div>
+        </div>
       </div>
-      <div>
-        <label>TP buffer (price)</label>
-        <input id="tpBuffer" type="number" step="0.00001" value="0">
+
+      <div class="spacer"></div>
+
+      <div class="grid3">
+        <div>
+          <label>Entry price</label>
+          <input id="entry" inputmode="decimal" value="1,1000" />
+        </div>
+
+        <div>
+          <label>SL distance (pips/ticks)</label>
+          <input id="slUnits" inputmode="decimal" value="18" />
+          <div class="tiny" id="unitsHint">Units = pips/ticks</div>
+        </div>
+
+        <div>
+          <label>Value per 1 unit @ 1 lot (EUR)</label>
+          <input id="valuePerUnit" inputmode="decimal" value="9" />
+          <div class="tiny">Most important for accuracy</div>
+        </div>
       </div>
-      <div style="display:flex; align-items:end;">
-        <button id="calcBtn" type="button">Calculate</button>
-      </div>
-    </div>
 
-    <div id="clickStatus" class="muted" style="margin-top:8px;"></div>
-  </div>
-
-  <!-- ===== RESULTS ===== -->
-  <div class="card">
-    <h3 style="margin:0 0 8px; font-size:14px;">Results</h3>
-    <div class="row"><div>Risk (EUR)</div><div id="riskOut">-</div></div>
-    <div class="row"><div>Loss per 1 lot (EUR)</div><div id="lossPerLotOut">-</div></div>
-    <div class="row"><div>Position size (lots)</div><div id="lotsOut">-</div></div>
-    <div class="row"><div>SL price</div><div id="slPriceOut">-</div></div>
-    <div class="row"><div>TP price</div><div id="tpPriceOut">-</div></div>
-  </div>
-
-  <!-- ===== DISCIPLINE (PRO ONLY) ===== -->
-  <div class="card">
-    <h3 style="margin:0 0 8px; font-size:14px;">Discipline Mode (Pro)</h3>
-
-    <!-- This wrapper gets locked/unlocked by app.js -->
-    <div id="proControls" class="lockOverlay">
+      <div class="spacer"></div>
 
       <div class="grid2">
         <div>
-          <label>Daily loss limit (EUR)</label>
-          <input id="dailyLimit" type="number" step="0.01" value="500">
+          <label>Unit size (price per 1 unit)</label>
+          <input id="unitSize" inputmode="decimal" value="0,0001" />
+          <div class="tiny">For EURUSD: 0.0001, for JPY: 0.01, for Gold often 0.01, BTC often 1</div>
         </div>
+
         <div>
-          <label>Today PnL (EUR)</label>
-          <input id="todayPnl" type="number" step="0.01" value="0">
+          <label>Lot step</label>
+          <input id="lotStep" inputmode="decimal" value="0,01" />
+          <div class="tiny">FX usually 0.01, Crypto sometimes 0.001</div>
         </div>
       </div>
 
-      <div class="row"><div>Remaining daily (EUR)</div><div id="remainingDaily">-</div></div>
-      <div class="row"><div>Trades left today (est.)</div><div id="tradesLeft">-</div></div>
+      <div class="spacer"></div>
 
-      <div class="muted" style="margin-top:10px;">
-        Tip: Set your daily limit once, then only update Today PnL.
+      <button class="btn primary" id="btnCalculate">Calculate</button>
+
+      <div class="spacer"></div>
+
+      <div class="card" style="background:#101014">
+        <h3 style="margin:0 0 10px;font-size:14px">Results</h3>
+        <div class="row"><div>Risk (EUR)</div><div id="outRisk">—</div></div>
+        <div class="row"><div>Loss per 1 lot (EUR)</div><div id="outLossPerLot">—</div></div>
+        <div class="row"><div>Position size (lots)</div><div id="outLots">—</div></div>
+        <div class="row"><div>SL price</div><div id="outSL">—</div></div>
+        <div class="row"><div>TP price</div><div id="outTP">—</div></div>
       </div>
     </div>
 
-    <div class="muted" style="margin-top:10px;">
-      Locked until you sign in.
+    <div class="spacer"></div>
+
+    <!-- DISCIPLINE / PRO -->
+    <div class="card" id="proCard" style="display:none">
+      <h3 style="margin:0 0 10px;font-size:14px">Discipline Mode (Pro)</h3>
+
+      <!-- LOGIN BOX -->
+      <div class="card" style="background:#101014">
+        <div class="grid3">
+          <div>
+            <label>Email</label>
+            <input id="email" autocomplete="email" />
+          </div>
+          <div>
+            <label>Password</label>
+            <input id="password" type="password" autocomplete="current-password" />
+          </div>
+          <div style="display:flex;align-items:end;gap:10px">
+            <button class="btn primary" id="btnSignIn">Sign in</button>
+            <button class="btn danger" id="btnSignOut">Sign out</button>
+          </div>
+        </div>
+        <div class="spacer"></div>
+        <div class="pill">Status: <b id="authStatus">Signed out</b></div>
+        <div class="spacer"></div>
+        <div class="muted">
+          Pro features are unlocked after sign-in. (Later you can connect Stripe.)
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <!-- PRO CONTROLS -->
+      <div id="proControls" class="lock">
+        <div class="grid3">
+          <div>
+            <label>Account size (EUR)</label>
+            <input id="accountSize" inputmode="decimal" value="10000" />
+          </div>
+          <div>
+            <label>Daily loss %</label>
+            <input id="dailyLossPct" inputmode="decimal" value="5" />
+          </div>
+          <div>
+            <label>Max loss %</label>
+            <input id="maxLossPct" inputmode="decimal" value="10" />
+          </div>
+        </div>
+
+        <div class="spacer"></div>
+
+        <div class="grid2">
+          <div>
+            <label>Today PnL (EUR) (e.g. -120 or +80)</label>
+            <input id="todayPnl" inputmode="decimal" value="0" />
+          </div>
+          <div>
+            <label>Total PnL (EUR)</label>
+            <input id="totalPnl" inputmode="decimal" value="0" />
+          </div>
+        </div>
+
+        <div class="spacer"></div>
+
+        <button class="btn primary" id="btnCanITake">Can I take this trade?</button>
+
+        <div class="spacer"></div>
+
+        <div class="card" style="background:#101014">
+          <h3 style="margin:0 0 10px;font-size:14px">Prop Survival Engine</h3>
+          <div class="row"><div>Remaining Daily (EUR)</div><div id="outRemainDaily">—</div></div>
+          <div class="row"><div>Remaining Overall (EUR)</div><div id="outRemainOverall">—</div></div>
+          <div class="row"><div>Trade status</div><div id="outTradeStatus">—</div></div>
+          <div class="muted">
+            If your trade risk is bigger than Remaining Daily/Overall → engine blocks it.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="spacer"></div>
+    <div class="muted">
+      Tip: If GitHub Pages shows old version, open with <b>?v=NEW_NUMBER</b> (e.g. ?v=100).
     </div>
   </div>
 
-</div>
+  <!-- Firebase (CDN, no npm) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
-<!-- IMPORTANT: module script (required for Firebase imports) -->
-<script type="module" src="app.js?v=6"></script>
+  <script src="app.js?v=100"></script>
 </body>
 </html>
