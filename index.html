@@ -1,301 +1,272 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Prop Risk Tool</title>
-  <style>
-    :root{
-      --bg:#0b0b0c; --card:#151519; --muted:#9aa0a6; --text:#fff; --line:#23232a;
-      --btn:#1c1c24; --btn2:#232331; --ok:#22c55e; --bad:#ef4444; --warn:#f59e0b;
-      --accent:#60a5fa;
-      --radius:16px;
-    }
-    body{background:var(--bg); color:var(--text); font-family:Arial,system-ui; margin:0;}
-    .wrap{max-width:980px; margin:0 auto; padding:18px;}
-    h1{margin:6px 0 14px; font-size:28px;}
-    .card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:16px; margin:12px 0;}
-    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;}
-    .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
-    .grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;}
-    @media (max-width:820px){ .grid2,.grid3{grid-template-columns:1fr;} }
-    label{display:block; font-size:12px; opacity:.85; margin:0 0 6px;}
-    input,select{width:100%; padding:12px; border-radius:14px; border:1px solid var(--line);
-      background:#0f0f13; color:#fff; outline:none;}
-    input:disabled,select:disabled{opacity:.55}
-    button{
-      width:100%; padding:12px; border-radius:14px; border:1px solid var(--line);
-      background:var(--btn); color:#fff; cursor:pointer; font-weight:700;
-    }
-    button:hover{background:var(--btn2)}
-    .muted{color:var(--muted); font-size:12px; line-height:1.4}
-    .pill{display:inline-flex; gap:8px; align-items:center; padding:8px 10px; border:1px solid var(--line);
-      border-radius:999px; background:#0f0f13; font-size:12px; color:#d7dde5;}
-    .status{font-weight:800}
-    .ok{color:var(--ok)} .bad{color:var(--bad)} .warn{color:var(--warn)}
-    .divider{height:1px; background:var(--line); margin:12px 0;}
-    .btnRow{display:grid; grid-template-columns:repeat(4, 1fr); gap:8px;}
-    @media (max-width:820px){ .btnRow{grid-template-columns:repeat(2,1fr);} }
-    .tiny{font-size:11px; opacity:.85}
-    .lockbox{background:#0f0f13; border:1px dashed var(--line); padding:12px; border-radius:14px}
-    .right{display:flex; justify-content:flex-end}
-    .hide{display:none !important;}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prop Risk Tool</title>
+
+<style>
+  body { background:#0b0b0c; color:#fff; font-family:Arial, system-ui; margin:0; }
+  .wrap { max-width:980px; margin:auto; padding:18px; }
+  .card { background:#151519; padding:14px; border-radius:14px; margin-bottom:12px; border:1px solid #24242a; }
+  label { font-size:12px; opacity:.85; display:block; margin:10px 0 6px; }
+  input, select { width:100%; padding:10px; background:#0f0f13; color:#fff; border:1px solid #2c2c35; border-radius:10px; }
+  button { width:100%; padding:12px; background:#1c1c24; color:white; border:1px solid #2c2c35; border-radius:12px; cursor:pointer; font-weight:700; }
+  button:hover { background:#232331; }
+  button:disabled { opacity:.55; cursor:not-allowed; }
+  .row { display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid #24242a; }
+  .row:last-child { border-bottom:0; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  .muted { font-size:12px; opacity:.75; line-height:1.35; }
+  .switch { display:flex; gap:10px; margin-bottom:12px; }
+  .modeBtn { flex:1; padding:10px; background:#1c1c24; border:1px solid #2c2c35; border-radius:12px; cursor:pointer; text-align:center; font-weight:700; }
+  .active { background:#2a2a35; }
+  .pill { display:inline-block; padding:2px 8px; border:1px solid #2c2c35; border-radius:999px; font-size:12px; opacity:.9; }
+  .tiny { font-size:11px; opacity:.8; margin-top:6px; }
+  .divider { height:1px; background:#24242a; margin:12px 0; }
+  .btnRow { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  @media (max-width:820px){ .grid2,.grid3{grid-template-columns:1fr;} .btnRow{grid-template-columns:repeat(2,1fr);} }
+  .ok { color:#22c55e; font-weight:800; }
+  .bad { color:#ef4444; font-weight:800; }
+  .warn { color:#f59e0b; font-weight:800; }
+</style>
 </head>
 
 <body>
-  <div class="wrap">
-    <h1>Prop Risk Tool</h1>
+<div class="wrap">
 
-    <!-- AUTH / PRO -->
-    <div class="card">
-      <div class="row" style="justify-content:space-between;">
-        <div class="pill">
-          <span id="authDot" style="width:10px;height:10px;border-radius:50%;background:#777;display:inline-block"></span>
-          <span id="authText">Not signed in</span>
-        </div>
-        <div style="min-width:220px" class="right">
-          <button id="signOutBtn" class="hide">Sign out</button>
-        </div>
+  <h2 style="margin:6px 0 14px;">Prop Risk Tool <span class="pill">Shows pips + price</span></h2>
+
+  <!-- ✅ FIX: real buttons (not div) -->
+  <div class="switch">
+    <button id="quickModeBtn" type="button" class="modeBtn active">Quick</button>
+    <button id="disciplineModeBtn" type="button" class="modeBtn">Discipline 🔒</button>
+  </div>
+
+  <!-- LOGIN -->
+  <div class="card">
+    <h3 style="margin:0 0 8px; font-size:14px;">Pro Login</h3>
+
+    <div class="grid2">
+      <div>
+        <label>Email</label>
+        <input id="email" type="email" placeholder="you@email.com">
       </div>
-
-      <div class="divider"></div>
-
-      <div id="authBox" class="grid3">
-        <div>
-          <label>Email</label>
-          <input id="email" placeholder="you@email.com" autocomplete="email" />
-        </div>
-        <div>
-          <label>Password</label>
-          <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" />
-        </div>
-        <div>
-          <label>&nbsp;</label>
-          <button id="signInBtn">Sign in</button>
-          <div class="tiny muted">First time? Click Sign in (it will create account if not exists).</div>
-        </div>
-      </div>
-
-      <div class="divider"></div>
-
-      <div class="lockbox">
-        <div class="grid2">
-          <div>
-            <label>Pro code (optional)</label>
-            <input id="proCodeInput" placeholder="Enter Pro code" />
-            <div class="muted">Unlock is saved on this device.</div>
-          </div>
-          <div>
-            <label>&nbsp;</label>
-            <button id="unlockBtn">Unlock Pro</button>
-          </div>
-        </div>
-        <div class="muted">
-          Pro features: Prop presets, Can I take this trade, Loss-streak lock.
-        </div>
+      <div>
+        <label>Password</label>
+        <input id="password" type="password" placeholder="min. 6 chars">
       </div>
     </div>
 
-    <!-- CALCULATOR -->
-    <div class="card">
-      <h3 style="margin:0 0 10px;">Calculator</h3>
+    <div class="grid3" style="margin-top:10px;">
+      <button id="signUpBtn" type="button">Create account</button>
+      <button id="signInBtn" type="button">Sign in</button>
+      <button id="signOutBtn" type="button">Sign out</button>
+    </div>
+
+    <div class="muted" id="userStatus" style="margin-top:8px;">Not signed in</div>
+  </div>
+
+  <!-- CALCULATOR -->
+  <div class="card">
+    <h3 style="margin:0 0 8px; font-size:14px;">Quick Calculator</h3>
+
+    <div class="grid3">
+      <div>
+        <label>Symbol</label>
+        <select id="symbol"></select>
+      </div>
+      <div>
+        <label>Direction</label>
+        <select id="direction">
+          <option value="LONG">LONG</option>
+          <option value="SHORT">SHORT</option>
+        </select>
+      </div>
+      <div>
+        <label>RR (if TP units empty)</label>
+        <input id="rr" type="text" inputmode="decimal" value="2">
+        <div class="tiny muted">Comma decimals supported (e.g. 1,8)</div>
+      </div>
+    </div>
+
+    <div class="grid3">
+      <div>
+        <label>Balance (EUR)</label>
+        <input id="balance" type="text" inputmode="decimal" value="10000">
+      </div>
+      <div>
+        <label>Risk %</label>
+        <input id="riskPct" type="text" inputmode="decimal" value="0,5">
+      </div>
+      <div>
+        <label>Entry price</label>
+        <input id="entry" type="text" inputmode="decimal" value="1,10000">
+      </div>
+    </div>
+
+    <div class="grid3">
+      <div>
+        <label id="slUnitsLabel">SL (pips/ticks)</label>
+        <input id="slUnits" type="text" inputmode="decimal" value="15">
+        <div class="muted">Example: SL = 15 pips</div>
+      </div>
+
+      <div>
+        <label id="tpUnitsLabel">TP (pips/ticks)</label>
+        <input id="tpUnits" type="text" inputmode="decimal" value="30">
+        <div class="muted">Example: TP = 30 pips (or leave empty)</div>
+      </div>
+
+      <div>
+        <label>TP buffer (price)</label>
+        <input id="tpBuffer" type="text" inputmode="decimal" value="0">
+        <div class="muted">Optional</div>
+      </div>
+    </div>
+
+    <div class="grid3">
+      <div>
+        <label>Unit size (pip/tick)</label>
+        <input id="unitSize" type="text" inputmode="decimal" value="0,0001">
+        <div class="muted">Editable override</div>
+      </div>
+      <div>
+        <label>Value per unit @ 1 lot (EUR)</label>
+        <input id="valuePerUnit" type="text" inputmode="decimal" value="9,0">
+        <div class="muted">Most important for accuracy</div>
+      </div>
+      <div>
+        <label>Lot step</label>
+        <input id="lotStep" type="text" inputmode="decimal" value="0,01">
+      </div>
+    </div>
+
+    <div class="grid3">
+      <div style="display:flex; align-items:end;">
+        <button id="calcBtn" type="button">Calculate</button>
+      </div>
+      <div style="display:flex; align-items:end;">
+        <button id="canTakeBtn" type="button">Can I take this trade? (Pro)</button>
+      </div>
+      <div style="display:flex; align-items:end;">
+        <div class="muted" id="clickStatus"></div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Loss-streak lock (Pro) -->
+    <div class="card" style="margin:0;">
+      <h3 style="margin:0 0 8px; font-size:14px;">Loss-streak lock (Pro)</h3>
 
       <div class="grid3">
         <div>
-          <label>Symbol</label>
-          <select id="symbol">
-            <option value="EURUSD|fx">EURUSD (FX)</option>
-            <option value="GBPJPY|fxjpy">GBPJPY (FX JPY)</option>
-            <option value="XAUUSD|gold">XAUUSD (Gold)</option>
-            <option value="BTCUSD|crypto">BTCUSD (Crypto)</option>
-          </select>
-          <div class="tiny muted">You can add more symbols later.</div>
+          <label>Max loss streak</label>
+          <input id="maxStreak" type="text" inputmode="numeric" value="3">
         </div>
-
         <div>
-          <label>Direction</label>
-          <select id="direction">
-            <option value="LONG">LONG</option>
-            <option value="SHORT">SHORT</option>
-          </select>
+          <label>Cooldown (minutes)</label>
+          <input id="cooldownMin" type="text" inputmode="numeric" value="120">
         </div>
-
         <div>
-          <label>RR (R multiple)</label>
-          <input id="rr" value="2" inputmode="decimal" />
+          <label>Current streak</label>
+          <input id="streakNow" type="text" inputmode="numeric" value="0">
         </div>
       </div>
 
       <div class="grid3" style="margin-top:10px;">
-        <div>
-          <label>Balance (EUR)</label>
-          <input id="balance" value="10000" inputmode="decimal" />
-        </div>
-        <div>
-          <label>Risk %</label>
-          <input id="riskPct" value="0.5" inputmode="decimal" />
-        </div>
-        <div>
-          <label>Entry price</label>
-          <input id="entry" value="1.1000" inputmode="decimal" />
-        </div>
+        <button id="winBtn" type="button">Win ✅ (reset)</button>
+        <button id="lossBtn" type="button">Loss ❌ (+1)</button>
+        <button id="resetLockBtn" type="button">Reset lock</button>
       </div>
 
-      <div class="grid3" style="margin-top:10px;">
-        <div>
-          <label id="slLabel">SL distance (pips/ticks)</label>
-          <input id="slDist" value="18" inputmode="decimal" />
-          <div class="tiny muted">You input SL distance (like 10 / 18 / 300), NOT price.</div>
-        </div>
-        <div>
-          <label id="tpLabel">TP distance (pips/ticks)</label>
-          <input id="tpDist" value="40" inputmode="decimal" />
-        </div>
-        <div>
-          <label>Value per 1 unit @ 1 lot (EUR)</label>
-          <input id="valuePerUnit" value="9" inputmode="decimal" />
-          <div class="tiny muted">Most important for accuracy. You can override per broker.</div>
-        </div>
-      </div>
-
-      <div class="grid2" style="margin-top:10px;">
-        <div>
-          <label>Unit size (pip/tick size)</label>
-          <input id="unitSize" value="0.0001" inputmode="decimal" />
-          <div class="tiny muted">FX: 0.0001 (or JPY 0.01). Gold often 0.01. Crypto often 1.</div>
-        </div>
-        <div>
-          <label>Lot step</label>
-          <input id="lotStep" value="0.01" inputmode="decimal" />
-          <div class="tiny muted">Crypto sometimes 0.001.</div>
-        </div>
-      </div>
-
-      <div class="row" style="margin-top:10px;">
-        <div style="flex:1">
-          <button id="calcBtn">Calculate</button>
-        </div>
-        <div style="flex:1">
-          <button id="canTakeBtn">Can I take this trade?</button>
-        </div>
-      </div>
-
-      <div class="divider"></div>
-
-      <div class="grid2">
-        <div class="card" style="margin:0;">
-          <h3 style="margin:0 0 10px;">Results</h3>
-          <div class="row" style="justify-content:space-between;"><div class="muted">Risk €</div><div id="outRisk" class="status">0</div></div>
-          <div class="row" style="justify-content:space-between;"><div class="muted">Lots</div><div id="outLots" class="status">0</div></div>
-          <div class="row" style="justify-content:space-between;"><div class="muted">Loss per 1 lot €</div><div id="outLossPerLot" class="status">0</div></div>
-          <div class="divider"></div>
-          <div class="row" style="justify-content:space-between;"><div class="muted">SL price (auto)</div><div id="outSlPrice" class="status">—</div></div>
-          <div class="row" style="justify-content:space-between;"><div class="muted">TP price (auto)</div><div id="outTpPrice" class="status">—</div></div>
-          <div class="tiny muted">SL/TP prices are calculated from Entry + distance × unit size. You don’t type prices.</div>
-        </div>
-
-        <div class="card" style="margin:0;">
-          <h3 style="margin:0 0 10px;">Loss-streak lock (Pro)</h3>
-
-          <div id="lossLockBox">
-            <div class="grid3">
-              <div>
-                <label>Max loss streak</label>
-                <input id="maxStreak" value="3" inputmode="numeric" />
-              </div>
-              <div>
-                <label>Cooldown (minutes)</label>
-                <input id="cooldownMin" value="120" inputmode="numeric" />
-              </div>
-              <div>
-                <label>Current streak</label>
-                <input id="streakNow" value="0" inputmode="numeric" />
-                <div class="tiny muted">Or use Win/Loss buttons below.</div>
-              </div>
-            </div>
-
-            <div class="row" style="margin-top:10px;">
-              <div style="flex:1"><button id="winBtn">Win ✅ (reset streak)</button></div>
-              <div style="flex:1"><button id="lossBtn">Loss ❌ (+1 streak)</button></div>
-              <div style="flex:1"><button id="resetLockBtn">Reset lock</button></div>
-            </div>
-
-            <div class="divider"></div>
-            <div class="row" style="justify-content:space-between;">
-              <div class="muted">Status</div>
-              <div id="lockStatus" class="status">Unlocked</div>
-            </div>
-            <div class="tiny muted" id="lockHint"></div>
-          </div>
-
-          <div class="muted" id="lossLockedMsg">
-            Pro locked. Sign in + unlock Pro to use Loss-streak lock.
-          </div>
-        </div>
+      <div class="muted" style="margin-top:10px;">
+        Status: <span id="lockStatus" class="warn">Pro required</span>
+        <div id="lockHint" class="tiny muted"></div>
       </div>
     </div>
-
-    <!-- PROP ENGINE (PRO) -->
-    <div class="card">
-      <h3 style="margin:0 0 10px;">Prop Survival Engine (Pro)</h3>
-
-      <div id="proEngineBox">
-        <div class="btnRow" style="margin-bottom:10px;">
-          <button class="presetBtn" data-preset="FTMO10K">FTMO 10K</button>
-          <button class="presetBtn" data-preset="FTMO25K">FTMO 25K</button>
-          <button class="presetBtn" data-preset="FTMO50K">FTMO 50K</button>
-          <button class="presetBtn" data-preset="FTMO100K">FTMO 100K</button>
-        </div>
-
-        <div class="grid3">
-          <div>
-            <label>Account size (EUR)</label>
-            <input id="accountSize" value="10000" inputmode="decimal" />
-          </div>
-          <div>
-            <label>Daily loss %</label>
-            <input id="dailyLossPct" value="5" inputmode="decimal" />
-          </div>
-          <div>
-            <label>Max loss %</label>
-            <input id="maxLossPct" value="10" inputmode="decimal" />
-          </div>
-        </div>
-
-        <div class="grid2" style="margin-top:10px;">
-          <div>
-            <label>Today PnL (EUR) (e.g. -120 or +80)</label>
-            <input id="todayPnl" value="0" inputmode="decimal" />
-          </div>
-          <div>
-            <label>Total PnL (EUR)</label>
-            <input id="totalPnl" value="0" inputmode="decimal" />
-          </div>
-        </div>
-
-        <div class="divider"></div>
-
-        <div class="row" style="justify-content:space-between;"><div class="muted">Remaining Daily (EUR)</div><div id="remDaily" class="status">—</div></div>
-        <div class="row" style="justify-content:space-between;"><div class="muted">Remaining Overall (EUR)</div><div id="remOverall" class="status">—</div></div>
-        <div class="row" style="justify-content:space-between;"><div class="muted">Trade Status</div><div id="tradeStatus" class="status">—</div></div>
-
-        <div class="tiny muted" id="engineHint"></div>
-      </div>
-
-      <div class="muted" id="proEngineLockedMsg">
-        Pro locked. Sign in + unlock Pro to use Prop Survival Engine.
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="muted">
-        Tip: You can type comma decimals (0,5). App converts it automatically.
-      </div>
-    </div>
-
   </div>
 
-  <script type="module" src="app.js?v=1"></script>
+  <!-- RESULTS -->
+  <div class="card">
+    <h3 style="margin:0 0 8px; font-size:14px;">Results</h3>
+    <div class="row"><div>Risk (EUR)</div><div id="riskOut">-</div></div>
+    <div class="row"><div>Loss per 1 lot (EUR)</div><div id="lossPerLotOut">-</div></div>
+    <div class="row"><div>Position size (lots)</div><div id="lotsOut">-</div></div>
+
+    <!-- show distances FIRST -->
+    <div class="row"><div>SL distance (pips/ticks)</div><div id="slUnitsOut">-</div></div>
+    <div class="row"><div>TP distance (pips/ticks)</div><div id="tpUnitsOut">-</div></div>
+
+    <!-- still show price too -->
+    <div class="row"><div>SL price</div><div id="slPriceOut">-</div></div>
+    <div class="row"><div>TP price</div><div id="tpPriceOut">-</div></div>
+
+    <div class="divider"></div>
+    <div class="row">
+      <div>Decision (Can I take this trade?)</div>
+      <div id="decisionOut">-</div>
+    </div>
+  </div>
+
+  <!-- PROP ENGINE (PRO) -->
+  <div class="card">
+    <h3 style="margin:0 0 8px; font-size:14px;">Prop Survival Engine (Pro)</h3>
+
+    <!-- ✅ NEW: preset buttons -->
+    <div class="btnRow" style="margin-bottom:10px;">
+      <button id="presetFTMO10K" type="button">FTMO 10K</button>
+      <button id="presetFTMO25K" type="button">FTMO 25K</button>
+      <button id="presetFTMO50K" type="button">FTMO 50K</button>
+      <button id="presetFTMO100K" type="button">FTMO 100K</button>
+    </div>
+
+    <div id="proControls">
+      <div class="grid3">
+        <div>
+          <label>Account size (EUR)</label>
+          <input id="accountSize" type="text" inputmode="decimal" value="10000">
+        </div>
+        <div>
+          <label>Daily loss %</label>
+          <input id="dailyLossPct" type="text" inputmode="decimal" value="5">
+        </div>
+        <div>
+          <label>Max loss %</label>
+          <input id="maxLossPct" type="text" inputmode="decimal" value="10">
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div>
+          <label>Today PnL (EUR) (e.g. -120 or +80)</label>
+          <input id="todayPnl" type="text" inputmode="decimal" value="0">
+        </div>
+        <div>
+          <label>Total PnL (EUR)</label>
+          <input id="totalPnL" type="text" inputmode="decimal" value="0">
+        </div>
+      </div>
+
+      <div class="row"><div>Remaining Daily (EUR)</div><div id="remainingDailyOut">-</div></div>
+      <div class="row"><div>Remaining Overall (EUR)</div><div id="remainingOverallOut">-</div></div>
+      <div class="row"><div>Trade Status</div><div id="tradeStatusOut">-</div></div>
+
+      <div class="muted" style="margin-top:10px;">
+        If your trade risk is bigger than Remaining Daily/Overall → the engine blocks it.
+      </div>
+    </div>
+
+    <div class="muted" style="margin-top:10px;">
+      Pro unlock = login. (Later we connect Stripe and unlock only paid plan.)
+    </div>
+  </div>
+
+</div>
+
+<!-- bump version to bust cache -->
+<script type="module" src="app.js?v=99"></script>
 </body>
 </html>
