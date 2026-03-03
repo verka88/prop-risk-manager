@@ -8,7 +8,7 @@
 <style>
   body { background:#0b0b0c; color:#fff; font-family:Arial, system-ui; margin:0; }
   .wrap { max-width:980px; margin:auto; padding:18px; }
-  .card { background:#151519; padding:14px; border-radius:14px; margin-bottom:12px; border:1px solid #24242a; position:relative; }
+  .card { background:#151519; padding:14px; border-radius:14px; margin-bottom:12px; border:1px solid #24242a; }
   label { font-size:12px; opacity:.85; display:block; margin:10px 0 6px; }
   input, select { width:100%; padding:10px; background:#0f0f13; color:#fff; border:1px solid #2c2c35; border-radius:10px; }
   button { width:100%; padding:12px; background:#1c1c24; color:white; border:1px solid #2c2c35; border-radius:12px; cursor:pointer; font-weight:700; }
@@ -30,35 +30,6 @@
   .ok { color:#22c55e; font-weight:800; }
   .bad { color:#ef4444; font-weight:800; }
   .warn { color:#f59e0b; font-weight:800; }
-
-  /* ===== PRO lock overlay ===== */
-  .pro-locked {
-    opacity:.60;
-    pointer-events:none;
-    filter:saturate(.8);
-  }
-  .proOverlay {
-    position:absolute;
-    inset:0;
-    border-radius:14px;
-    background:rgba(0,0,0,.45);
-    display:none;
-    align-items:center;
-    justify-content:center;
-    text-align:center;
-    padding:16px;
-    pointer-events:auto; /* overlay can capture clicks */
-  }
-  .proOverlayBox{
-    max-width:520px;
-    background:rgba(15,15,19,.92);
-    border:1px solid #2c2c35;
-    border-radius:14px;
-    padding:14px;
-  }
-  .proOverlayTitle{ font-weight:900; margin-bottom:6px; }
-  .proOverlayText{ font-size:12px; opacity:.85; line-height:1.35; }
-  .showOverlay .proOverlay { display:flex; }
 </style>
 </head>
 
@@ -96,14 +67,30 @@
     <div class="muted" id="userStatus" style="margin-top:8px;">Not signed in</div>
   </div>
 
-  <!-- CALCULATOR (FREE) -->
+  <!-- CALCULATOR -->
   <div class="card">
     <h3 style="margin:0 0 8px; font-size:14px;">Quick Calculator</h3>
 
     <div class="grid3">
       <div>
         <label>Symbol</label>
-        <select id="symbol"></select>
+
+<input id="symbolSearch" type="text" placeholder="Search symbol..." style="margin-bottom:6px;" />
+
+<select id="symbol"></select>
+
+<div style="margin-top:8px;">
+  <button id="showAddSymbol" type="button">+ Add Custom Symbol</button>
+</div>
+
+<div id="addSymbolBox" style="display:none; margin-top:10px;">
+  <input id="customSymbolName" placeholder="Symbol name (e.g. US500)" />
+  <input id="customUnitSize" placeholder="Unit size (e.g. 1)" />
+  <input id="customValuePerUnit" placeholder="Value per unit @1 lot" />
+  <input id="customLotStep" placeholder="Lot step (e.g. 0.01)" />
+  <button id="addSymbolBtn" type="button">Save Symbol</button>
+</div>
+        
       </div>
       <div>
         <label>Direction</label>
@@ -136,15 +123,15 @@
 
     <div class="grid3">
       <div>
-        <label id="slUnitsLabel">SL (units)</label>
+        <label id="slUnitsLabel">SL (pips/ticks)</label>
         <input id="slUnits" type="text" inputmode="decimal" value="15">
         <div class="muted">Example: SL = 15 units</div>
       </div>
 
       <div>
-        <label id="tpUnitsLabel">TP (units)</label>
+        <label id="tpUnitsLabel">TP (pips/ticks)</label>
         <input id="tpUnits" type="text" inputmode="decimal" value="30">
-        <div class="muted">Example: TP = 30 units</div>
+        <div class="muted">Example: TP = 30 units (or leave empty)</div>
       </div>
 
       <div>
@@ -185,15 +172,8 @@
 
     <div class="divider"></div>
 
-    <!-- Loss-streak lock (PRO) -->
-    <div class="card proCard" id="lossLockCard" style="margin:0;">
-      <div class="proOverlay">
-        <div class="proOverlayBox">
-          <div class="proOverlayTitle">🔒 Pro feature</div>
-          <div class="proOverlayText">Sign in to unlock Loss-streak lock.</div>
-        </div>
-      </div>
-
+    <!-- Loss-streak lock (Pro) -->
+    <div class="card" style="margin:0;">
       <h3 style="margin:0 0 8px; font-size:14px;">Loss-streak lock (Pro)</h3>
 
       <div class="grid3">
@@ -245,14 +225,7 @@
   </div>
 
   <!-- CHALLENGE ENGINE (PRO) -->
-  <div class="card proCard" id="challengeEngineCard">
-    <div class="proOverlay">
-      <div class="proOverlayBox">
-        <div class="proOverlayTitle">🔒 Pro feature</div>
-        <div class="proOverlayText">Sign in to unlock Challenge Engine + presets.</div>
-      </div>
-    </div>
-
+  <div class="card">
     <h3 style="margin:0 0 8px; font-size:14px;">Prop Challenge Engine (Pro)</h3>
 
     <div class="btnRow" style="margin-bottom:10px;">
@@ -306,6 +279,6 @@
 </div>
 
 <!-- bump version to bust cache -->
-<script type="module" src="app.js?v=300"></script>
+<script type="module" src="app.js?v=200"></script>
 </body>
 </html>
