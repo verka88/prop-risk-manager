@@ -75,23 +75,23 @@
       <div>
         <label>Symbol</label>
 
-        <input id="symbolSearch" type="text" placeholder="Search symbol..." style="margin-bottom:6px;" />
-        <select id="symbol"></select>
+<input id="symbolSearch" type="text" placeholder="Search symbol..." style="margin-bottom:6px;" />
 
-        <div style="margin-top:8px;">
-          <button id="showAddSymbol" type="button">+ Add Custom Symbol</button>
-        </div>
+<select id="symbol"></select>
 
-        <div id="addSymbolBox" style="display:none; margin-top:10px;">
-          <input id="customSymbolName" placeholder="Symbol name (e.g. US500)" />
-          <input id="customUnitSize" placeholder="Unit size (e.g. 1)" />
-          <input id="customValuePerUnit" placeholder="Value per unit @1 lot (EUR)" />
-          <input id="customLotStep" placeholder="Lot step (e.g. 0.01)" />
-          <button id="addSymbolBtn" type="button">Save Symbol</button>
-          <div class="tiny muted">Saved to this browser (local storage).</div>
-        </div>
+<div style="margin-top:8px;">
+  <button id="showAddSymbol" type="button">+ Add Custom Symbol</button>
+</div>
+
+<div id="addSymbolBox" style="display:none; margin-top:10px;">
+  <input id="customSymbolName" placeholder="Symbol name (e.g. US500)" />
+  <input id="customUnitSize" placeholder="Unit size (e.g. 1)" />
+  <input id="customValuePerUnit" placeholder="Value per unit @1 lot" />
+  <input id="customLotStep" placeholder="Lot step (e.g. 0.01)" />
+  <button id="addSymbolBtn" type="button">Save Symbol</button>
+</div>
+        
       </div>
-
       <div>
         <label>Direction</label>
         <select id="direction">
@@ -99,7 +99,6 @@
           <option value="SHORT">SHORT</option>
         </select>
       </div>
-
       <div>
         <label>RR (if TP units empty)</label>
         <input id="rr" type="text" inputmode="decimal" value="2">
@@ -122,25 +121,6 @@
       </div>
     </div>
 
-    <!-- ✅ NEW: SL/TP PRICE inputs -->
-    <div class="grid3">
-      <div>
-        <label>SL price (optional)</label>
-        <input id="slPriceIn" type="text" inputmode="decimal" placeholder="e.g. 1,09850">
-        <div class="tiny muted">If filled, SL units auto-calc from price.</div>
-      </div>
-      <div>
-        <label>TP price (optional)</label>
-        <input id="tpPriceIn" type="text" inputmode="decimal" placeholder="e.g. 1,10450">
-        <div class="tiny muted">If filled, TP units auto-calc from price.</div>
-      </div>
-      <div>
-        <label>SL Buffer (pips/ticks/points)</label>
-        <input id="slBuffer" type="text" inputmode="decimal" value="0">
-        <div class="tiny muted">Adds extra units to SL only.</div>
-      </div>
-    </div>
-
     <div class="grid3">
       <div>
         <label id="slUnitsLabel">SL (pips/ticks)</label>
@@ -155,9 +135,9 @@
       </div>
 
       <div>
-        <label>Lot step</label>
-        <input id="lotStep" type="text" inputmode="decimal" value="0,01">
-        <div class="muted">Editable override</div>
+        <label>TP buffer (price)</label>
+        <input id="tpBuffer" type="text" inputmode="decimal" value="0">
+        <div class="muted">Optional</div>
       </div>
     </div>
 
@@ -173,9 +153,8 @@
         <div class="muted">Most important for accuracy</div>
       </div>
       <div>
-        <div class="tiny muted" style="margin-top:28px;">
-          Tip: For perfect accuracy across brokers, adjust Value per unit.
-        </div>
+        <label>Lot step</label>
+        <input id="lotStep" type="text" inputmode="decimal" value="0,01">
       </div>
     </div>
 
@@ -300,6 +279,6 @@
 </div>
 
 <!-- bump version to bust cache -->
-<script type="module" src="app.js?v=201"></script>
+<script type="module" src="app.js?v=200"></script>
 </body>
 </html>
