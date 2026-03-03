@@ -27,7 +27,7 @@ const $ = (id) => document.getElementById(id);
 function n(id){
   const el = $(id);
   if(!el) return 0;
-  const val = String(el.value ?? "").replace(",",".").trim();
+  const val = String(el.value).replace(",",".");
   const num = parseFloat(val);
   return Number.isFinite(num) ? num : 0;
 }
@@ -58,22 +58,42 @@ let isPro = false;
 
 // ===== Symbol presets (editable defaults) =====
 const symbols = {
+  // ===== FX (major, non-JPY) =====
   "EURUSD": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
   "GBPUSD": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
-  "EURGBP": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
+  "AUDUSD": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
+  "NZDUSD": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
+  "USDCAD": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
+  "USDCHF": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
 
+  // ===== FX (crosses) =====
+  "EURGBP": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
+  "EURCHF": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
+  "EURAUD": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
+  "GBPAUD": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
+
+  // ===== FX (JPY pairs) =====
   "USDJPY": { asset:"FX", unitName:"pips", unitSize:0.01, valuePerUnit:7.0, lotStep:0.01 },
   "EURJPY": { asset:"FX", unitName:"pips", unitSize:0.01, valuePerUnit:7.0, lotStep:0.01 },
+  "GBPJPY": { asset:"FX", unitName:"pips", unitSize:0.01, valuePerUnit:7.0, lotStep:0.01 },
+  "AUDJPY": { asset:"FX", unitName:"pips", unitSize:0.01, valuePerUnit:7.0, lotStep:0.01 },
 
+  // ===== Metals =====
   "XAUUSD": { asset:"Metals", unitName:"ticks", unitSize:0.01, valuePerUnit:1.0, lotStep:0.01 },
   "XAGUSD": { asset:"Metals", unitName:"ticks", unitSize:0.01, valuePerUnit:0.5, lotStep:0.01 },
 
+  // ===== Indices (CFD defaults) =====
   "NAS100": { asset:"Index", unitName:"points", unitSize:1, valuePerUnit:1.0, lotStep:0.01 },
   "US30":   { asset:"Index", unitName:"points", unitSize:1, valuePerUnit:1.0, lotStep:0.01 },
   "SPX500": { asset:"Index", unitName:"points", unitSize:1, valuePerUnit:1.0, lotStep:0.01 },
+  "GER40":  { asset:"Index", unitName:"points", unitSize:1, valuePerUnit:1.0, lotStep:0.01 },
+  "UK100":  { asset:"Index", unitName:"points", unitSize:1, valuePerUnit:1.0, lotStep:0.01 },
 
+  // ===== Crypto =====
   "BTCUSD": { asset:"Crypto", unitName:"ticks", unitSize:1, valuePerUnit:1.0, lotStep:0.001 },
-  "ETHUSD": { asset:"Crypto", unitName:"ticks", unitSize:0.1, valuePerUnit:0.1, lotStep:0.001 }
+  "ETHUSD": { asset:"Crypto", unitName:"ticks", unitSize:0.1, valuePerUnit:0.1, lotStep:0.001 },
+  "SOLUSD": { asset:"Crypto", unitName:"ticks", unitSize:0.01, valuePerUnit:0.01, lotStep:0.001 },
+  "XRPUSD": { asset:"Crypto", unitName:"ticks", unitSize:0.0001, valuePerUnit:0.0001, lotStep:0.001 }
 };
 
 function populateSymbols(){
@@ -108,95 +128,13 @@ function applySymbolDefaults(sym){
   if($("lotStep")) $("lotStep").value = String(cfg.lotStep).replace(".",",");
 }
 
-// ===== PRO UI Lock/Unlock =====
-function setProUI(){
-  // These whole cards are PRO-only:
-  const proCards = [
-    $("lossLockCard"),
-    $("challengeEngineCard")
-  ].filter(Boolean);
-
-  proCards.forEach(card=>{
-    if(isPro){
-      card.classList.remove("pro-locked");
-      card.classList.remove("showOverlay");
-      card.style.pointerEvents = "auto";
-      card.style.opacity = "1";
-    }else{
-      card.classList.add("pro-locked");
-      card.classList.add("showOverlay");
-      card.style.pointerEvents = "auto"; // overlay still clickable (but blocks underlying)
-      card.style.opacity = "1";
-    }
-  });
-
-  // Pro button in FREE area:
-  const canTakeBtn = $("canTakeBtn");
-  if(canTakeBtn) canTakeBtn.disabled = !isPro || isLocked();
-
-  // “Discipline 🔒” label
-  const discBtn = $("disciplineModeBtn");
-  if(discBtn) discBtn.textContent = isPro ? "Discipline" : "Discipline 🔒";
-
-  // If not Pro, clear pro outputs so it doesn't confuse
-  if(!isPro){
-    if($("decisionOut")) $("decisionOut").textContent = "-";
-    if($("remainingDailyOut")) $("remainingDailyOut").textContent = "-";
-    if($("remainingOverallOut")) $("remainingOverallOut").textContent = "-";
-    if($("tradeStatusOut")) $("tradeStatusOut").textContent = "-";
-    const lockStatus = $("lockStatus");
-    if(lockStatus){
-      lockStatus.textContent = "Pro required";
-      lockStatus.className = "warn";
-    }
-  }
-
-  applyLockUI();
-}
-
-// ===== Loss Streak Lock (PRO) =====
+// ===== Loss Streak Lock =====
 function isLocked(){
-  const until = localStorage.getItem("lockUntil");
+  const until=localStorage.getItem("lockUntil");
   return until && Date.now() < parseInt(until,10);
 }
 
-function applyLockUI(){
-  const locked = isLocked();
-
-  const lockStatus = $("lockStatus");
-  if(lockStatus){
-    if(!isPro){
-      lockStatus.textContent = "Pro required";
-      lockStatus.className = "warn";
-    }else{
-      lockStatus.textContent = locked ? "LOCKED ❌" : "Unlocked ✅";
-      lockStatus.className = locked ? "bad" : "ok";
-    }
-  }
-
-  // FREE calc should still work even when locked (lock is PRO concept)
-  // BUT you asked earlier to block engine decisions when locked, so:
-  const canTakeBtn = $("canTakeBtn");
-  if(canTakeBtn) canTakeBtn.disabled = !isPro || locked;
-
-  // Pro-only streak buttons
-  const winBtn = $("winBtn");
-  const lossBtn = $("lossBtn");
-  const resetLockBtn = $("resetLockBtn");
-  [winBtn, lossBtn, resetLockBtn].forEach(b=>{
-    if(b) b.disabled = !isPro;
-  });
-
-  // Presets (Pro)
-  ["presetChallenge10K","presetChallenge25K","presetChallenge50K","presetChallenge100K"]
-    .forEach(id=>{
-      const b = $(id);
-      if(b) b.disabled = !isPro;
-    });
-}
-
 function triggerLock(){
-  if(!isPro) return;
   const cooldownMin = n("cooldownMin") || 120;
   const until = Date.now() + cooldownMin*60000;
   localStorage.setItem("lockUntil", String(until));
@@ -204,14 +142,93 @@ function triggerLock(){
 }
 
 function resetLock(){
-  if(!isPro) return;
   localStorage.removeItem("lockUntil");
   applyLockUI();
 }
 
-// ===== Challenge Engine (PRO) =====
+// ===== PRO UI LOCK (this was missing) =====
+function setProUI(){
+  // lock the whole challenge engine block
+  const proControls = $("proControls");
+  if(proControls){
+    proControls.style.opacity = isPro ? "1" : "0.55";
+    proControls.style.pointerEvents = isPro ? "auto" : "none";
+  }
+
+  // mode button label
+  const discBtn = $("disciplineModeBtn");
+  if(discBtn){
+    discBtn.textContent = isPro ? "Discipline" : "Discipline 🔒";
+  }
+
+  // presets buttons disabled when not PRO
+  [
+    "presetChallenge10K","presetChallenge25K","presetChallenge50K","presetChallenge100K",
+    // legacy ids (if exist)
+    "presetFTMO10K","presetFTMO25K","presetFTMO50K","presetFTMO100K"
+  ].forEach(id=>{
+    const b = $(id);
+    if(b) b.disabled = !isPro;
+  });
+
+  // loss-streak buttons disabled when not PRO
+  ["winBtn","lossBtn","resetLockBtn"].forEach(id=>{
+    const b = $(id);
+    if(b) b.disabled = !isPro;
+  });
+
+  // canTake disabled when not PRO (also respects lock)
+  const canTakeBtn = $("canTakeBtn");
+  if(canTakeBtn) canTakeBtn.disabled = !isPro || isLocked();
+
+  // calc is always FREE unless locked
+  const calcBtn = $("calcBtn");
+  if(calcBtn) calcBtn.disabled = isLocked();
+
+  applyLockUI();
+}
+
+// keep lock status text consistent with PRO
+function applyLockUI(){
+  const locked=isLocked();
+
+  const lockStatus = $("lockStatus");
+  if(lockStatus){
+    lockStatus.textContent = !isPro
+      ? "Pro required"
+      : (locked ? "LOCKED ❌" : "Unlocked ✅");
+    lockStatus.className = !isPro ? "warn" : (locked ? "bad" : "ok");
+  }
+
+  const lockHint = $("lockHint");
+  if(lockHint){
+    if(!isPro) lockHint.textContent = "Login to unlock loss-streak lock.";
+    else if(locked){
+      const until = parseInt(localStorage.getItem("lockUntil")||"0",10);
+      const mins = Math.max(0, Math.ceil((until - Date.now())/60000));
+      lockHint.textContent = `Cooldown active: ~${mins} min left`;
+    } else {
+      lockHint.textContent = "";
+    }
+  }
+
+  // buttons
+  const calcBtn = $("calcBtn");
+  if(calcBtn) calcBtn.disabled = locked;
+
+  const canTakeBtn = $("canTakeBtn");
+  if(canTakeBtn) canTakeBtn.disabled = locked || !isPro;
+}
+
+// ===== Prop Engine =====
 function runPropEngine(riskMoney){
-  if(!isPro) return;
+  if(!isPro){
+    // keep outputs clean in FREE
+    if($("remainingDailyOut")) $("remainingDailyOut").textContent = "-";
+    if($("remainingOverallOut")) $("remainingOverallOut").textContent = "-";
+    if($("tradeStatusOut")) $("tradeStatusOut").textContent = "-";
+    return;
+  }
 
   const acc=n("accountSize");
   const dailyPct=n("dailyLossPct");
@@ -236,8 +253,10 @@ function runPropEngine(riskMoney){
   if($("decisionOut")) $("decisionOut").textContent=status;
 }
 
-// ===== Calculator (FREE) =====
+// ===== Calculator =====
 function calculate(){
+  if(isLocked()) return;
+
   const balance=n("balance");
   const riskPct=n("riskPct");
   const entry=n("entry");
@@ -267,29 +286,22 @@ function calculate(){
   if($("slPriceOut")) $("slPriceOut").textContent=fmtPrice(slPrice);
   if($("tpPriceOut")) $("tpPriceOut").textContent=fmtPrice(tpPrice);
 
-  if($("clickStatus")){
-    const sym = $("symbol")?.value || "";
-    const a = symbols[sym]?.asset || "";
-    $("clickStatus").textContent = sym ? `Calculated ✅ (${sym}${a?` / ${a}`:""})` : "Calculated ✅";
-  }
-
-  // Only pro engine updates decision
-  if(isPro) runPropEngine(riskMoney);
+  runPropEngine(riskMoney);
 }
 
-// ===== Can I Take Trade (PRO) =====
+// ===== Can I Take Trade =====
 function canTakeTrade(){
-  if(!isPro) return alert("Pro required.");
+  if(!isPro) return alert("Pro required. Please sign in.");
   if(isLocked()) return alert("Locked by loss-streak rule.");
   calculate();
 }
 
-// ===== Presets (PRO) =====
+// ===== Presets =====
 function applyPreset(size){
-  if(!isPro) return alert("Pro required.");
-  if($("accountSize")) $("accountSize").value=String(size);
-  if($("dailyLossPct")) $("dailyLossPct").value="5";
-  if($("maxLossPct")) $("maxLossPct").value="10";
+  if(!isPro) return alert("Pro required. Please sign in.");
+  if($("accountSize")) $("accountSize").value=size;
+  if($("dailyLossPct")) $("dailyLossPct").value=5;
+  if($("maxLossPct")) $("maxLossPct").value=10;
   calculate();
 }
 
@@ -301,23 +313,19 @@ function wireLogin(){
 
   if(signUp) signUp.onclick=async()=>{
     try{
-      await createUserWithEmailAndPassword(auth, ($("email")?.value||"").trim(), $("password")?.value||"");
-    }catch(e){ alert(e.message); }
+      await createUserWithEmailAndPassword(auth, ($("email")?.value || "").trim(), $("password")?.value || "");
+    } catch(e){ alert(e.message); }
   };
-
   if(signIn) signIn.onclick=async()=>{
     try{
-      await signInWithEmailAndPassword(auth, ($("email")?.value||"").trim(), $("password")?.value||"");
-    }catch(e){ alert(e.message); }
+      await signInWithEmailAndPassword(auth, ($("email")?.value || "").trim(), $("password")?.value || "");
+    } catch(e){ alert(e.message); }
   };
-
-  if(signOutBtn) signOutBtn.onclick=async()=>{
-    try{ await signOut(auth); }catch(e){ alert(e.message); }
-  };
+  if(signOutBtn) signOutBtn.onclick=async()=>{ await signOut(auth); };
 
   onAuthStateChanged(auth,(user)=>{
     isPro=!!user;
-    if($("userStatus")) $("userStatus").textContent = user ? `Signed in: ${user.email}` : "Not signed in";
+    if($("userStatus")) $("userStatus").textContent=user?`Signed in: ${user.email}`:"Not signed in";
     setProUI();
     calculate();
   });
@@ -325,19 +333,58 @@ function wireLogin(){
 
 // ===== Wire UI =====
 document.addEventListener("DOMContentLoaded",()=>{
-  // mode UI
-  on("quickModeBtn","click",()=>{
-    $("quickModeBtn")?.classList.add("active");
-    $("disciplineModeBtn")?.classList.remove("active");
-  });
-  on("disciplineModeBtn","click",()=>{
-    $("disciplineModeBtn")?.classList.add("active");
-    $("quickModeBtn")?.classList.remove("active");
-  });
-
   populateSymbols();
   wireLogin();
+// ==========================
+// ===== SYMBOL SEARCH ======
+// ==========================
+on("symbolSearch","input",(e)=>{
+  const search = e.target.value.toUpperCase();
+  const sel = $("symbol");
+  if(!sel) return;
 
+  sel.innerHTML = "";
+
+  Object.keys(symbols)
+    .filter(sym => sym.includes(search))
+    .forEach(sym=>{
+      const opt = document.createElement("option");
+      opt.value = sym;
+      opt.textContent = sym;
+      sel.appendChild(opt);
+    });
+});
+
+// ==========================
+// ===== TOGGLE ADD BOX =====
+// ==========================
+on("showAddSymbol","click",()=>{
+  const box = $("addSymbolBox");
+  if(!box) return;
+  box.style.display = box.style.display === "none" ? "block" : "none";
+});
+
+// ==========================
+// ===== SAVE CUSTOM SYMBOL =
+// ==========================
+on("addSymbolBtn","click",()=>{
+  const name = $("customSymbolName").value.trim().toUpperCase();
+  if(!name) return alert("Enter symbol name.");
+
+  symbols[name] = {
+    unitSize: parseFloat($("customUnitSize").value) || 1,
+    valuePerUnit: parseFloat($("customValuePerUnit").value) || 1,
+    lotStep: parseFloat($("customLotStep").value) || 0.01
+  };
+
+  populateSymbols();
+  $("symbol").value = name;
+
+  $("addSymbolBox").style.display="none";
+
+  // uloženie do localStorage (aby sa nestratilo)
+  localStorage.setItem("customSymbols", JSON.stringify(symbols));
+});
   on("symbol","change",()=>{
     applySymbolDefaults($("symbol").value);
     calculate();
@@ -346,40 +393,57 @@ document.addEventListener("DOMContentLoaded",()=>{
   on("calcBtn","click",calculate);
   on("canTakeBtn","click",canTakeTrade);
 
-  // Loss streak buttons (PRO)
+  // PRO lock button behavior: if someone clicks disabled via keyboard, show message
+  ["presetChallenge10K","presetChallenge25K","presetChallenge50K","presetChallenge100K"].forEach(id=>{
+    const b = $(id);
+    if(!b) return;
+    b.addEventListener("click", ()=> {
+      if(!isPro) return alert("Pro required. Please sign in.");
+    }, { capture:true });
+  });
+
   on("lossBtn","click",()=>{
-    if(!isPro) return alert("Pro required.");
+    if(!isPro) return alert("Pro required. Please sign in.");
     const sEl = $("streakNow");
     const cur = parseInt(sEl?.value || "0",10);
     const next = cur + 1;
     if(sEl) sEl.value = String(next);
     if(next >= (n("maxStreak") || 3)) triggerLock();
     applyLockUI();
+    setProUI();
   });
 
   on("winBtn","click",()=>{
-    if(!isPro) return alert("Pro required.");
-    if($("streakNow")) $("streakNow").value="0";
-    resetLock();
+    if(!isPro) return alert("Pro required. Please sign in.");
+    if($("streakNow")) $("streakNow").value=0;
+    applyLockUI();
+    setProUI();
   });
 
   on("resetLockBtn","click",()=>{
-    if(!isPro) return alert("Pro required.");
+    if(!isPro) return alert("Pro required. Please sign in.");
     resetLock();
+    setProUI();
   });
 
-  // Preset buttons (PRO)
-  [
+  // Presets (Challenge + legacy IDs)
+  const presetMap = [
     ["presetChallenge10K", 10000],
     ["presetChallenge25K", 25000],
     ["presetChallenge50K", 50000],
     ["presetChallenge100K",100000],
-  ].forEach(([id, size])=>{
-    const b = $(id);
-    if(b) b.addEventListener("click",()=>applyPreset(size));
+
+    ["presetFTMO10K", 10000],
+    ["presetFTMO25K", 25000],
+    ["presetFTMO50K", 50000],
+    ["presetFTMO100K",100000],
+  ];
+  presetMap.forEach(([id, size]) => {
+    const el = $(id);
+    if(el) el.addEventListener("click", () => applyPreset(size));
   });
 
-  // Initial UI state
+  // initial UI lock state
   setProUI();
   calculate();
 });
