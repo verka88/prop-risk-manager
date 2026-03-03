@@ -32,37 +32,62 @@
   .warn { color:#f59e0b; font-weight:800; }
 
   /* Modal */
-  .modalBack { position:fixed; inset:0; background:rgba(0,0,0,.65); display:none; align-items:center; justify-content:center; padding:14px; }
-  .modal { width:min(760px, 100%); background:#151519; border:1px solid #2c2c35; border-radius:14px; padding:14px; }
-  .modalHead { display:flex; align-items:center; justify-content:space-between; gap:10px; }
-  .xBtn { width:auto; padding:8px 12px; }
+  .modalBg { position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; padding:16px; }
+  .modal { width:min(720px, 100%); }
 </style>
 </head>
 
 <body>
 <div class="wrap">
-  <h2 style="margin:6px 0 14px;">Pro Challenge Risk Tool <span class="pill">Units + price</span></h2>
+
+  <h2 style="margin:6px 0 14px;">Pro Challenge Risk Tool <span class="pill">FREE + PRO</span></h2>
 
   <div class="switch">
-    <button id="quickModeBtn" type="button" class="modeBtn active">Quick</button>
-    <button id="disciplineModeBtn" type="button" class="modeBtn">Discipline</button>
+    <button id="quickModeBtn" type="button" class="modeBtn active">Quick (FREE)</button>
+    <button id="disciplineModeBtn" type="button" class="modeBtn">Discipline (PRO 🔒)</button>
   </div>
 
-  <!-- CALCULATOR -->
+  <!-- LOGIN (PRO unlock) -->
   <div class="card">
-    <h3 style="margin:0 0 8px; font-size:14px;">Quick Calculator</h3>
+    <h3 style="margin:0 0 8px; font-size:14px;">Login (unlocks PRO)</h3>
+
+    <div class="grid2">
+      <div>
+        <label>Email</label>
+        <input id="email" type="email" placeholder="you@email.com" />
+      </div>
+      <div>
+        <label>Password</label>
+        <input id="password" type="password" placeholder="min. 6 chars" />
+      </div>
+    </div>
+
+    <div class="grid3" style="margin-top:10px;">
+      <button id="signUpBtn" type="button">Create account</button>
+      <button id="signInBtn" type="button">Sign in</button>
+      <button id="signOutBtn" type="button">Sign out</button>
+    </div>
+
+    <div class="muted" id="userStatus" style="margin-top:8px;">Not signed in (FREE mode)</div>
+  </div>
+
+  <!-- QUICK (FREE) -->
+  <div class="card" id="quickCard">
+    <h3 style="margin:0 0 8px; font-size:14px;">Quick Calculator (FREE)</h3>
 
     <div class="grid3">
       <div>
         <label>Symbol</label>
 
-        <!-- Search -->
-        <input id="symbolSearch" type="text" placeholder="Search (e.g. EURUSD, XAU, BTC)..." />
+        <!-- Search box -->
+        <input id="symbolSearch" type="text" placeholder="Search symbol (e.g. BTC usd, EURUSD, XAUUSD)" />
+        <div class="tiny muted">Search ignores spaces and symbols: BTC usd = BTCUSD</div>
 
-        <select id="symbol" style="margin-top:8px;"></select>
+        <!-- Select -->
+        <select id="symbol"></select>
 
+        <button id="addCustomBtn" type="button" style="margin-top:10px;">+ Add Custom Symbol (FREE)</button>
         <div class="tiny muted">Custom symbols are saved on this device (LocalStorage).</div>
-        <button id="addCustomBtn" type="button" style="margin-top:8px;">+ Add Custom Symbol (FREE)</button>
       </div>
 
       <div>
@@ -71,12 +96,19 @@
           <option value="LONG">LONG</option>
           <option value="SHORT">SHORT</option>
         </select>
+
+        <label style="margin-top:10px;">RR (used if TP units is empty)</label>
+        <input id="rr" type="text" inputmode="decimal" value="2" />
+        <div class="tiny muted">Comma supported (e.g. 1,8)</div>
       </div>
 
       <div>
-        <label>RR (if TP units empty)</label>
-        <input id="rr" type="text" inputmode="decimal" value="2" />
-        <div class="tiny muted">Comma supported (e.g. 1,8)</div>
+        <label>Entry price</label>
+        <input id="entry" type="text" inputmode="decimal" value="1,10000" />
+
+        <label style="margin-top:10px;">TP buffer (price)</label>
+        <input id="tpBuffer" type="text" inputmode="decimal" value="0" />
+        <div class="tiny muted">Optional</div>
       </div>
     </div>
 
@@ -90,8 +122,8 @@
         <input id="riskPct" type="text" inputmode="decimal" value="0,5" />
       </div>
       <div>
-        <label>Entry price</label>
-        <input id="entry" type="text" inputmode="decimal" value="1,10000" />
+        <label>Lot step</label>
+        <input id="lotStep" type="text" inputmode="decimal" value="0,01" />
       </div>
     </div>
 
@@ -99,52 +131,43 @@
       <div>
         <label id="slUnitsLabel">SL (units)</label>
         <input id="slUnits" type="text" inputmode="decimal" value="15" />
+        <div class="tiny muted">Example: 15 pips / ticks / points</div>
       </div>
 
       <div>
         <label id="tpUnitsLabel">TP (units)</label>
         <input id="tpUnits" type="text" inputmode="decimal" value="30" />
-        <div class="tiny muted">If empty → TP from RR</div>
+        <div class="tiny muted">Leave empty → uses RR</div>
       </div>
 
-      <div>
-        <label>TP buffer (price)</label>
-        <input id="tpBuffer" type="text" inputmode="decimal" value="0" />
-      </div>
-    </div>
-
-    <div class="grid3">
       <div>
         <label>Unit size (pip/tick/point)</label>
         <input id="unitSize" type="text" inputmode="decimal" value="0,0001" />
-      </div>
-      <div>
-        <label>Value per unit @ 1 lot (EUR)</label>
-        <input id="valuePerUnit" type="text" inputmode="decimal" value="9,0" />
-      </div>
-      <div>
-        <label>Lot step</label>
-        <input id="lotStep" type="text" inputmode="decimal" value="0,01" />
+        <div class="tiny muted">Editable override</div>
       </div>
     </div>
 
     <div class="grid3">
+      <div>
+        <label>Value per unit @ 1 lot (EUR)</label>
+        <input id="valuePerUnit" type="text" inputmode="decimal" value="9,0" />
+        <div class="tiny muted">Most important for accuracy</div>
+      </div>
       <div style="display:flex; align-items:end;">
         <button id="calcBtn" type="button">Calculate</button>
       </div>
       <div style="display:flex; align-items:end;">
-        <button id="canTakeBtn" type="button">Can I take this trade?</button>
-      </div>
-      <div style="display:flex; align-items:end;">
-        <div class="muted" id="clickStatus"></div>
+        <button id="canTakeBtn" type="button">Can I take this trade? (PRO)</button>
       </div>
     </div>
 
+    <div class="tiny muted" id="clickStatus"></div>
+
     <div class="divider"></div>
 
-    <!-- Loss-streak lock -->
+    <!-- Loss-streak lock (PRO) -->
     <div class="card" style="margin:0;">
-      <h3 style="margin:0 0 8px; font-size:14px;">Loss-streak lock (FREE)</h3>
+      <h3 style="margin:0 0 8px; font-size:14px;">Loss-streak lock (PRO)</h3>
 
       <div class="grid3">
         <div>
@@ -168,13 +191,13 @@
       </div>
 
       <div class="muted" style="margin-top:10px;">
-        Status: <span id="lockStatus" class="ok">Unlocked ✅</span>
+        Status: <span id="lockStatus" class="warn">Pro required</span>
         <div id="lockHint" class="tiny muted"></div>
       </div>
     </div>
   </div>
 
-  <!-- RESULTS -->
+  <!-- RESULTS (FREE) -->
   <div class="card">
     <h3 style="margin:0 0 8px; font-size:14px;">Results</h3>
     <div class="row"><div>Risk (EUR)</div><div id="riskOut">-</div></div>
@@ -188,15 +211,12 @@
     <div class="row"><div>TP price</div><div id="tpPriceOut">-</div></div>
 
     <div class="divider"></div>
-    <div class="row">
-      <div>Decision (Can I take this trade?)</div>
-      <div id="decisionOut">-</div>
-    </div>
+    <div class="row"><div>Decision</div><div id="decisionOut">-</div></div>
   </div>
 
-  <!-- CHALLENGE ENGINE -->
-  <div class="card">
-    <h3 style="margin:0 0 8px; font-size:14px;">Prop Challenge Engine (FREE)</h3>
+  <!-- CHALLENGE ENGINE (PRO) -->
+  <div class="card" id="proCard">
+    <h3 style="margin:0 0 8px; font-size:14px;">Prop Challenge Engine (PRO)</h3>
 
     <div class="btnRow" style="margin-bottom:10px;">
       <button id="presetChallenge10K" type="button">Challenge 10K</button>
@@ -240,21 +260,24 @@
         If your trade risk is bigger than Remaining Daily/Overall → the engine blocks it.
       </div>
     </div>
+
+    <div class="muted" style="margin-top:10px;">
+      PRO unlock = login. (Later you can connect payments and unlock only paid plans.)
+    </div>
   </div>
+
 </div>
 
-<!-- Modal: Add Custom Symbol -->
-<div id="modalBack" class="modalBack">
-  <div class="modal">
-    <div class="modalHead">
-      <h3 style="margin:0; font-size:14px;">Add Custom Symbol</h3>
-      <button id="closeModalBtn" class="xBtn" type="button">✕</button>
-    </div>
+<!-- MODAL: Add custom symbol -->
+<div id="modalBg" class="modalBg">
+  <div class="card modal">
+    <h3 style="margin:0 0 8px; font-size:14px;">Add Custom Symbol (FREE)</h3>
 
-    <div class="grid3" style="margin-top:10px;">
+    <div class="grid3">
       <div>
         <label>Symbol name</label>
-        <input id="csName" type="text" placeholder="e.g. EURGBP" />
+        <input id="csName" type="text" placeholder="e.g. BTCUSD or EURGBP" />
+        <div class="tiny muted">No spaces (we auto-fix BTC usd → BTCUSD)</div>
       </div>
       <div>
         <label>Unit size</label>
@@ -262,7 +285,7 @@
       </div>
       <div>
         <label>Value per unit @ 1 lot (EUR)</label>
-        <input id="csValuePerUnit" type="text" inputmode="decimal" value="9" />
+        <input id="csValuePerUnit" type="text" inputmode="decimal" value="9,0" />
       </div>
     </div>
 
@@ -271,22 +294,18 @@
         <label>Lot step</label>
         <input id="csLotStep" type="text" inputmode="decimal" value="0,01" />
       </div>
-      <div style="grid-column: span 2;">
-        <label>Unit label (optional)</label>
-        <input id="csUnitLabel" type="text" placeholder="pips / ticks / points / units" />
+      <div style="display:flex; align-items:end;">
+        <button id="saveCustomBtn" type="button">Save</button>
+      </div>
+      <div style="display:flex; align-items:end;">
+        <button id="closeModalBtn" type="button">Close</button>
       </div>
     </div>
 
-    <div class="grid3" style="margin-top:10px;">
-      <button id="saveCustomBtn" type="button">Save symbol</button>
-      <button id="deleteCustomBtn" type="button">Delete selected custom</button>
-      <button id="cancelCustomBtn" type="button">Cancel</button>
-    </div>
-
-    <div class="tiny muted" id="modalHint" style="margin-top:8px;"></div>
+    <div class="tiny muted" id="customMsg"></div>
   </div>
 </div>
 
-<script type="module" src="./app.js?v=300"></script>
+<script type="module" src="app.js?v=300"></script>
 </body>
 </html>
