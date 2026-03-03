@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pro Challenge Risk Tool</title>
 
 <style>
@@ -30,35 +30,31 @@
   .ok { color:#22c55e; font-weight:800; }
   .bad { color:#ef4444; font-weight:800; }
   .warn { color:#f59e0b; font-weight:800; }
-
-  /* Modal */
-  .modalBg { position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; padding:16px; }
-  .modal { width:min(720px, 100%); }
 </style>
 </head>
 
 <body>
 <div class="wrap">
 
-  <h2 style="margin:6px 0 14px;">Pro Challenge Risk Tool <span class="pill">FREE + PRO</span></h2>
+  <h2 style="margin:6px 0 14px;">Pro Challenge Risk Tool <span class="pill">Shows units + price</span></h2>
 
   <div class="switch">
-    <button id="quickModeBtn" type="button" class="modeBtn active">Quick (FREE)</button>
-    <button id="disciplineModeBtn" type="button" class="modeBtn">Discipline (PRO 🔒)</button>
+    <button id="quickModeBtn" type="button" class="modeBtn active">Quick</button>
+    <button id="disciplineModeBtn" type="button" class="modeBtn">Discipline 🔒</button>
   </div>
 
-  <!-- LOGIN (PRO unlock) -->
+  <!-- LOGIN -->
   <div class="card">
-    <h3 style="margin:0 0 8px; font-size:14px;">Login (unlocks PRO)</h3>
+    <h3 style="margin:0 0 8px; font-size:14px;">Pro Login</h3>
 
     <div class="grid2">
       <div>
         <label>Email</label>
-        <input id="email" type="email" placeholder="you@email.com" />
+        <input id="email" type="email" placeholder="you@email.com">
       </div>
       <div>
         <label>Password</label>
-        <input id="password" type="password" placeholder="min. 6 chars" />
+        <input id="password" type="password" placeholder="min. 6 chars">
       </div>
     </div>
 
@@ -68,119 +64,114 @@
       <button id="signOutBtn" type="button">Sign out</button>
     </div>
 
-    <div class="muted" id="userStatus" style="margin-top:8px;">Not signed in (FREE mode)</div>
+    <div class="muted" id="userStatus" style="margin-top:8px;">Not signed in</div>
   </div>
 
-  <!-- QUICK (FREE) -->
-  <div class="card" id="quickCard">
-    <h3 style="margin:0 0 8px; font-size:14px;">Quick Calculator (FREE)</h3>
+  <!-- CALCULATOR -->
+  <div class="card">
+    <h3 style="margin:0 0 8px; font-size:14px;">Quick Calculator</h3>
 
     <div class="grid3">
       <div>
         <label>Symbol</label>
-
-        <!-- Search box -->
-        <input id="symbolSearch" type="text" placeholder="Search symbol (e.g. BTC usd, EURUSD, XAUUSD)" />
-        <div class="tiny muted">Search ignores spaces and symbols: BTC usd = BTCUSD</div>
-
-        <!-- Select -->
         <select id="symbol"></select>
-
-        <button id="addCustomBtn" type="button" style="margin-top:10px;">+ Add Custom Symbol (FREE)</button>
-        <div class="tiny muted">Custom symbols are saved on this device (LocalStorage).</div>
       </div>
-
       <div>
         <label>Direction</label>
         <select id="direction">
           <option value="LONG">LONG</option>
           <option value="SHORT">SHORT</option>
         </select>
-
-        <label style="margin-top:10px;">RR (used if TP units is empty)</label>
-        <input id="rr" type="text" inputmode="decimal" value="2" />
-        <div class="tiny muted">Comma supported (e.g. 1,8)</div>
       </div>
-
       <div>
-        <label>Entry price</label>
-        <input id="entry" type="text" inputmode="decimal" value="1,10000" />
-
-        <label style="margin-top:10px;">TP buffer (price)</label>
-        <input id="tpBuffer" type="text" inputmode="decimal" value="0" />
-        <div class="tiny muted">Optional</div>
+        <label>RR (if TP units empty)</label>
+        <input id="rr" type="text" inputmode="decimal" value="2">
+        <div class="tiny muted">Comma decimals supported (e.g. 1,8)</div>
       </div>
     </div>
 
     <div class="grid3">
       <div>
         <label>Balance (EUR)</label>
-        <input id="balance" type="text" inputmode="decimal" value="10000" />
+        <input id="balance" type="text" inputmode="decimal" value="10000">
       </div>
       <div>
         <label>Risk %</label>
-        <input id="riskPct" type="text" inputmode="decimal" value="0,5" />
+        <input id="riskPct" type="text" inputmode="decimal" value="0,5">
+      </div>
+      <div>
+        <label>Entry price</label>
+        <input id="entry" type="text" inputmode="decimal" value="1,10000">
+      </div>
+    </div>
+
+    <div class="grid3">
+      <div>
+        <label id="slUnitsLabel">SL (pips/ticks)</label>
+        <input id="slUnits" type="text" inputmode="decimal" value="15">
+        <div class="muted">Example: SL = 15 units</div>
+      </div>
+
+      <div>
+        <label id="tpUnitsLabel">TP (pips/ticks)</label>
+        <input id="tpUnits" type="text" inputmode="decimal" value="30">
+        <div class="muted">Example: TP = 30 units (or leave empty)</div>
+      </div>
+
+      <div>
+        <label>TP buffer (price)</label>
+        <input id="tpBuffer" type="text" inputmode="decimal" value="0">
+        <div class="muted">Optional</div>
+      </div>
+    </div>
+
+    <div class="grid3">
+      <div>
+        <label>Unit size (pip/tick)</label>
+        <input id="unitSize" type="text" inputmode="decimal" value="0,0001">
+        <div class="muted">Editable override</div>
+      </div>
+      <div>
+        <label>Value per unit @ 1 lot (EUR)</label>
+        <input id="valuePerUnit" type="text" inputmode="decimal" value="9,0">
+        <div class="muted">Most important for accuracy</div>
       </div>
       <div>
         <label>Lot step</label>
-        <input id="lotStep" type="text" inputmode="decimal" value="0,01" />
+        <input id="lotStep" type="text" inputmode="decimal" value="0,01">
       </div>
     </div>
 
     <div class="grid3">
-      <div>
-        <label id="slUnitsLabel">SL (units)</label>
-        <input id="slUnits" type="text" inputmode="decimal" value="15" />
-        <div class="tiny muted">Example: 15 pips / ticks / points</div>
-      </div>
-
-      <div>
-        <label id="tpUnitsLabel">TP (units)</label>
-        <input id="tpUnits" type="text" inputmode="decimal" value="30" />
-        <div class="tiny muted">Leave empty → uses RR</div>
-      </div>
-
-      <div>
-        <label>Unit size (pip/tick/point)</label>
-        <input id="unitSize" type="text" inputmode="decimal" value="0,0001" />
-        <div class="tiny muted">Editable override</div>
-      </div>
-    </div>
-
-    <div class="grid3">
-      <div>
-        <label>Value per unit @ 1 lot (EUR)</label>
-        <input id="valuePerUnit" type="text" inputmode="decimal" value="9,0" />
-        <div class="tiny muted">Most important for accuracy</div>
-      </div>
       <div style="display:flex; align-items:end;">
         <button id="calcBtn" type="button">Calculate</button>
       </div>
       <div style="display:flex; align-items:end;">
-        <button id="canTakeBtn" type="button">Can I take this trade? (PRO)</button>
+        <button id="canTakeBtn" type="button">Can I take this trade? (Pro)</button>
+      </div>
+      <div style="display:flex; align-items:end;">
+        <div class="muted" id="clickStatus"></div>
       </div>
     </div>
 
-    <div class="tiny muted" id="clickStatus"></div>
-
     <div class="divider"></div>
 
-    <!-- Loss-streak lock (PRO) -->
+    <!-- Loss-streak lock (Pro) -->
     <div class="card" style="margin:0;">
-      <h3 style="margin:0 0 8px; font-size:14px;">Loss-streak lock (PRO)</h3>
+      <h3 style="margin:0 0 8px; font-size:14px;">Loss-streak lock (Pro)</h3>
 
       <div class="grid3">
         <div>
           <label>Max loss streak</label>
-          <input id="maxStreak" type="text" inputmode="numeric" value="3" />
+          <input id="maxStreak" type="text" inputmode="numeric" value="3">
         </div>
         <div>
           <label>Cooldown (minutes)</label>
-          <input id="cooldownMin" type="text" inputmode="numeric" value="120" />
+          <input id="cooldownMin" type="text" inputmode="numeric" value="120">
         </div>
         <div>
           <label>Current streak</label>
-          <input id="streakNow" type="text" inputmode="numeric" value="0" />
+          <input id="streakNow" type="text" inputmode="numeric" value="0">
         </div>
       </div>
 
@@ -197,7 +188,7 @@
     </div>
   </div>
 
-  <!-- RESULTS (FREE) -->
+  <!-- RESULTS -->
   <div class="card">
     <h3 style="margin:0 0 8px; font-size:14px;">Results</h3>
     <div class="row"><div>Risk (EUR)</div><div id="riskOut">-</div></div>
@@ -211,12 +202,15 @@
     <div class="row"><div>TP price</div><div id="tpPriceOut">-</div></div>
 
     <div class="divider"></div>
-    <div class="row"><div>Decision</div><div id="decisionOut">-</div></div>
+    <div class="row">
+      <div>Decision (Can I take this trade?)</div>
+      <div id="decisionOut">-</div>
+    </div>
   </div>
 
   <!-- CHALLENGE ENGINE (PRO) -->
-  <div class="card" id="proCard">
-    <h3 style="margin:0 0 8px; font-size:14px;">Prop Challenge Engine (PRO)</h3>
+  <div class="card">
+    <h3 style="margin:0 0 8px; font-size:14px;">Prop Challenge Engine (Pro)</h3>
 
     <div class="btnRow" style="margin-bottom:10px;">
       <button id="presetChallenge10K" type="button">Challenge 10K</button>
@@ -229,26 +223,26 @@
       <div class="grid3">
         <div>
           <label>Account size (EUR)</label>
-          <input id="accountSize" type="text" inputmode="decimal" value="10000" />
+          <input id="accountSize" type="text" inputmode="decimal" value="10000">
         </div>
         <div>
           <label>Daily loss %</label>
-          <input id="dailyLossPct" type="text" inputmode="decimal" value="5" />
+          <input id="dailyLossPct" type="text" inputmode="decimal" value="5">
         </div>
         <div>
           <label>Max loss %</label>
-          <input id="maxLossPct" type="text" inputmode="decimal" value="10" />
+          <input id="maxLossPct" type="text" inputmode="decimal" value="10">
         </div>
       </div>
 
       <div class="grid2">
         <div>
           <label>Today PnL (EUR) (e.g. -120 or +80)</label>
-          <input id="todayPnl" type="text" inputmode="decimal" value="0" />
+          <input id="todayPnl" type="text" inputmode="decimal" value="0">
         </div>
         <div>
           <label>Total PnL (EUR)</label>
-          <input id="totalPnL" type="text" inputmode="decimal" value="0" />
+          <input id="totalPnL" type="text" inputmode="decimal" value="0">
         </div>
       </div>
 
@@ -262,50 +256,13 @@
     </div>
 
     <div class="muted" style="margin-top:10px;">
-      PRO unlock = login. (Later you can connect payments and unlock only paid plans.)
+      Pro unlock = login. (Later you can connect payments and unlock only paid plans.)
     </div>
   </div>
 
 </div>
 
-<!-- MODAL: Add custom symbol -->
-<div id="modalBg" class="modalBg">
-  <div class="card modal">
-    <h3 style="margin:0 0 8px; font-size:14px;">Add Custom Symbol (FREE)</h3>
-
-    <div class="grid3">
-      <div>
-        <label>Symbol name</label>
-        <input id="csName" type="text" placeholder="e.g. BTCUSD or EURGBP" />
-        <div class="tiny muted">No spaces (we auto-fix BTC usd → BTCUSD)</div>
-      </div>
-      <div>
-        <label>Unit size</label>
-        <input id="csUnitSize" type="text" inputmode="decimal" value="0,0001" />
-      </div>
-      <div>
-        <label>Value per unit @ 1 lot (EUR)</label>
-        <input id="csValuePerUnit" type="text" inputmode="decimal" value="9,0" />
-      </div>
-    </div>
-
-    <div class="grid3">
-      <div>
-        <label>Lot step</label>
-        <input id="csLotStep" type="text" inputmode="decimal" value="0,01" />
-      </div>
-      <div style="display:flex; align-items:end;">
-        <button id="saveCustomBtn" type="button">Save</button>
-      </div>
-      <div style="display:flex; align-items:end;">
-        <button id="closeModalBtn" type="button">Close</button>
-      </div>
-    </div>
-
-    <div class="tiny muted" id="customMsg"></div>
-  </div>
-</div>
-
-<script type="module" src="app.js?v=300"></script>
+<!-- bump version to bust cache -->
+<script type="module" src="app.js?v=200"></script>
 </body>
 </html>
