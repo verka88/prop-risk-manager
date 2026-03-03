@@ -1,33 +1,21 @@
 // ===== Firebase CDN =====
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import {
   getAuth,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
 const firebaseConfig = {
-  <script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
-
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyAIpOlvSL_hVYEORkDUqOK5Zz3MIbGpc-o",
-    authDomain: "propengine-app.firebaseapp.com",
-    projectId: "propengine-app",
-    storageBucket: "propengine-app.firebasestorage.app",
-    messagingSenderId: "469340262601",
-    appId: "1:469340262601:web:0e3069ef3691f2ec883d18"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-</script>
+  apiKey: "AIzaSyBo2yXF4Lg-BSTA034dxm8begvAvuO-7iw",
+  authDomain: "prop-risk-tool.firebaseapp.com",
+  projectId: "prop-risk-tool",
+  storageBucket: "prop-risk-tool.firebasestorage.app",
+  messagingSenderId: "205235413030",
+  appId: "1:205235413030:web:8b7fb4ebc86a48e794c6e7"
+};
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
