@@ -74,11 +74,70 @@
     <div class="grid3">
       <div>
         <label>Symbol</label>
-        <select id="symbol"></select>
+
+        <!-- ✅ SEARCH -->
+        <input id="symbolSearch" type="text" placeholder="Search symbol (e.g. EUR, XAU, BTC)" autocomplete="off">
+
+        <select id="symbol" style="margin-top:8px;"></select>
+
         <div style="margin-top:8px;">
-          <button id="addCustomSymbolBtn" type="button">+ Add Custom Symbol</button>
+          <button id="addCustomSymbolBtn" type="button">+ Add Custom Symbol (FREE)</button>
         </div>
         <div class="tiny muted">Custom symbols are saved on this device (LocalStorage).</div>
+
+        <!-- Custom panel -->
+        <div id="customPanel" class="card" style="margin-top:10px; display:none;">
+          <h3 style="margin:0 0 8px; font-size:14px;">Add Custom Symbol</h3>
+
+          <div class="grid3">
+            <div>
+              <label>Symbol name</label>
+              <input id="customName" type="text" placeholder="e.g. BTCUSDT or XAUUSD.m">
+            </div>
+            <div>
+              <label>Unit name</label>
+              <select id="customUnitName">
+                <option value="pips">pips</option>
+                <option value="ticks" selected>ticks</option>
+                <option value="points">points</option>
+                <option value="units">units</option>
+              </select>
+            </div>
+            <div>
+              <label>Asset group</label>
+              <select id="customAsset">
+                <option value="Custom" selected>Custom</option>
+                <option value="FX">FX</option>
+                <option value="Metals">Metals</option>
+                <option value="Index">Index</option>
+                <option value="Crypto">Crypto</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid3">
+            <div>
+              <label>Unit size</label>
+              <input id="customUnitSize" type="text" inputmode="decimal" placeholder="e.g. 0,01 or 1">
+            </div>
+            <div>
+              <label>Value per unit @ 1 lot (EUR)</label>
+              <input id="customValuePerUnit" type="text" inputmode="decimal" placeholder="e.g. 1 or 9,0">
+            </div>
+            <div>
+              <label>Lot step</label>
+              <input id="customLotStep" type="text" inputmode="decimal" placeholder="e.g. 0,01 or 0,001">
+            </div>
+          </div>
+
+          <div class="grid3" style="margin-top:10px;">
+            <button id="saveCustomBtn" type="button">Save symbol</button>
+            <button id="cancelCustomBtn" type="button">Cancel</button>
+            <button id="removeCustomBtn" type="button">Remove selected custom</button>
+          </div>
+
+          <div class="tiny muted" id="customMsg" style="margin-top:8px;"></div>
+        </div>
       </div>
 
       <div>
@@ -115,19 +174,16 @@
       <div>
         <label id="slUnitsLabel">SL (units)</label>
         <input id="slUnits" type="text" inputmode="decimal" value="15">
-        <div class="muted">Example: SL = 15 units</div>
       </div>
 
       <div>
         <label id="tpUnitsLabel">TP (units)</label>
         <input id="tpUnits" type="text" inputmode="decimal" value="30">
-        <div class="muted">Example: TP = 30 units (or leave empty)</div>
       </div>
 
       <div>
         <label>TP buffer (price)</label>
         <input id="tpBuffer" type="text" inputmode="decimal" value="0">
-        <div class="muted">Optional</div>
       </div>
     </div>
 
@@ -135,12 +191,10 @@
       <div>
         <label>Unit size (pip/tick/point)</label>
         <input id="unitSize" type="text" inputmode="decimal" value="0,0001">
-        <div class="muted">Editable override</div>
       </div>
       <div>
         <label>Value per unit @ 1 lot (EUR)</label>
         <input id="valuePerUnit" type="text" inputmode="decimal" value="9,0">
-        <div class="muted">Most important for accuracy</div>
       </div>
       <div>
         <label>Lot step</label>
@@ -189,7 +243,6 @@
 
       <div class="muted" style="margin-top:10px;">
         Status: <span id="lockStatus" class="warn">Pro required</span>
-        <div id="lockHint" class="tiny muted"></div>
       </div>
     </div>
   </div>
@@ -243,7 +296,7 @@
 
       <div class="grid2">
         <div>
-          <label>Today PnL (EUR) (e.g. -120 or +80)</label>
+          <label>Today PnL (EUR)</label>
           <input id="todayPnl" type="text" inputmode="decimal" value="0">
         </div>
         <div>
@@ -255,20 +308,11 @@
       <div class="row"><div>Remaining Daily (EUR)</div><div id="remainingDailyOut">-</div></div>
       <div class="row"><div>Remaining Overall (EUR)</div><div id="remainingOverallOut">-</div></div>
       <div class="row"><div>Trade Status</div><div id="tradeStatusOut">-</div></div>
-
-      <div class="muted" style="margin-top:10px;">
-        If your trade risk is bigger than Remaining Daily/Overall → the engine blocks it.
-      </div>
-    </div>
-
-    <div class="muted" style="margin-top:10px;">
-      Pro unlock = login. (Later you can connect payments and unlock only paid plans.)
     </div>
   </div>
 
 </div>
 
-<!-- bump version to bust cache -->
-<script type="module" src="app.js?v=300"></script>
+<script type="module" src="app.js?v=500"></script>
 </body>
 </html>
