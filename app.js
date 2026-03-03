@@ -335,7 +335,56 @@ function wireLogin(){
 document.addEventListener("DOMContentLoaded",()=>{
   populateSymbols();
   wireLogin();
+// ==========================
+// ===== SYMBOL SEARCH ======
+// ==========================
+on("symbolSearch","input",(e)=>{
+  const search = e.target.value.toUpperCase();
+  const sel = $("symbol");
+  if(!sel) return;
 
+  sel.innerHTML = "";
+
+  Object.keys(symbols)
+    .filter(sym => sym.includes(search))
+    .forEach(sym=>{
+      const opt = document.createElement("option");
+      opt.value = sym;
+      opt.textContent = sym;
+      sel.appendChild(opt);
+    });
+});
+
+// ==========================
+// ===== TOGGLE ADD BOX =====
+// ==========================
+on("showAddSymbol","click",()=>{
+  const box = $("addSymbolBox");
+  if(!box) return;
+  box.style.display = box.style.display === "none" ? "block" : "none";
+});
+
+// ==========================
+// ===== SAVE CUSTOM SYMBOL =
+// ==========================
+on("addSymbolBtn","click",()=>{
+  const name = $("customSymbolName").value.trim().toUpperCase();
+  if(!name) return alert("Enter symbol name.");
+
+  symbols[name] = {
+    unitSize: parseFloat($("customUnitSize").value) || 1,
+    valuePerUnit: parseFloat($("customValuePerUnit").value) || 1,
+    lotStep: parseFloat($("customLotStep").value) || 0.01
+  };
+
+  populateSymbols();
+  $("symbol").value = name;
+
+  $("addSymbolBox").style.display="none";
+
+  // uloženie do localStorage (aby sa nestratilo)
+  localStorage.setItem("customSymbols", JSON.stringify(symbols));
+});
   on("symbol","change",()=>{
     applySymbolDefaults($("symbol").value);
     calculate();
