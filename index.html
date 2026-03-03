@@ -74,7 +74,23 @@
     <div class="grid3">
       <div>
         <label>Symbol</label>
-        <select id="symbol"></select>
+
+<input id="symbolSearch" type="text" placeholder="Search symbol..." style="margin-bottom:6px;" />
+
+<select id="symbol"></select>
+
+<div style="margin-top:8px;">
+  <button id="showAddSymbol" type="button">+ Add Custom Symbol</button>
+</div>
+
+<div id="addSymbolBox" style="display:none; margin-top:10px;">
+  <input id="customSymbolName" placeholder="Symbol name (e.g. US500)" />
+  <input id="customUnitSize" placeholder="Unit size (e.g. 1)" />
+  <input id="customValuePerUnit" placeholder="Value per unit @1 lot" />
+  <input id="customLotStep" placeholder="Lot step (e.g. 0.01)" />
+  <button id="addSymbolBtn" type="button">Save Symbol</button>
+</div>
+        
       </div>
       <div>
         <label>Direction</label>
