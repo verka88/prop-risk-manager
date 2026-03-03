@@ -23,16 +23,13 @@ const auth = getAuth(app);
 // ===== Helpers =====
 const $ = (id) => document.getElementById(id);
 
-function toNum(v){
-  const s = String(v ?? "").trim().replace(",", ".");
-  const num = parseFloat(s);
-  return Number.isFinite(num) ? num : 0;
-}
-
+// čísla aj s čiarkou
 function n(id){
   const el = $(id);
   if(!el) return 0;
-  return toNum(el.value);
+  const val = String(el.value).replace(",",".");
+  const num = parseFloat(val);
+  return Number.isFinite(num) ? num : 0;
 }
 
 function fmt2(x){ return Number.isFinite(x) ? x.toFixed(2) : "-"; }
@@ -49,6 +46,7 @@ function roundDownStep(value, step){
   return Math.floor(value/step)*step;
 }
 
+// null-safe event binder (aby sa JS nikdy nezrútil)
 function on(id, event, fn){
   const el = $(id);
   if(!el) return;
@@ -58,9 +56,9 @@ function on(id, event, fn){
 // ===== Global State =====
 let isPro = false;
 
-// ===== Default symbols =====
-const defaultSymbols = {
-  // FX
+// ===== Symbol presets (editable defaults) =====
+const symbols = {
+  // ===== FX (major, non-JPY) =====
   "EURUSD": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
   "GBPUSD": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
   "AUDUSD": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
@@ -68,84 +66,56 @@ const defaultSymbols = {
   "USDCAD": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
   "USDCHF": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
 
+  // ===== FX (crosses) =====
   "EURGBP": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
   "EURCHF": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
   "EURAUD": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
   "GBPAUD": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
 
+  // ===== FX (JPY pairs) =====
   "USDJPY": { asset:"FX", unitName:"pips", unitSize:0.01, valuePerUnit:7.0, lotStep:0.01 },
   "EURJPY": { asset:"FX", unitName:"pips", unitSize:0.01, valuePerUnit:7.0, lotStep:0.01 },
   "GBPJPY": { asset:"FX", unitName:"pips", unitSize:0.01, valuePerUnit:7.0, lotStep:0.01 },
   "AUDJPY": { asset:"FX", unitName:"pips", unitSize:0.01, valuePerUnit:7.0, lotStep:0.01 },
 
-  // Metals
+  // ===== Metals =====
   "XAUUSD": { asset:"Metals", unitName:"ticks", unitSize:0.01, valuePerUnit:1.0, lotStep:0.01 },
   "XAGUSD": { asset:"Metals", unitName:"ticks", unitSize:0.01, valuePerUnit:0.5, lotStep:0.01 },
 
-  // Indices
+  // ===== Indices (CFD defaults) =====
   "NAS100": { asset:"Index", unitName:"points", unitSize:1, valuePerUnit:1.0, lotStep:0.01 },
   "US30":   { asset:"Index", unitName:"points", unitSize:1, valuePerUnit:1.0, lotStep:0.01 },
   "SPX500": { asset:"Index", unitName:"points", unitSize:1, valuePerUnit:1.0, lotStep:0.01 },
   "GER40":  { asset:"Index", unitName:"points", unitSize:1, valuePerUnit:1.0, lotStep:0.01 },
   "UK100":  { asset:"Index", unitName:"points", unitSize:1, valuePerUnit:1.0, lotStep:0.01 },
 
-  // Crypto
+  // ===== Crypto =====
   "BTCUSD": { asset:"Crypto", unitName:"ticks", unitSize:1, valuePerUnit:1.0, lotStep:0.001 },
   "ETHUSD": { asset:"Crypto", unitName:"ticks", unitSize:0.1, valuePerUnit:0.1, lotStep:0.001 },
   "SOLUSD": { asset:"Crypto", unitName:"ticks", unitSize:0.01, valuePerUnit:0.01, lotStep:0.001 },
   "XRPUSD": { asset:"Crypto", unitName:"ticks", unitSize:0.0001, valuePerUnit:0.0001, lotStep:0.001 }
 };
 
-// ===== Custom symbols storage =====
-const CUSTOM_KEY = "customSymbols_v1";
-
-function loadCustomSymbols(){
-  try{
-    const raw = localStorage.getItem(CUSTOM_KEY);
-    const obj = raw ? JSON.parse(raw) : {};
-    return (obj && typeof obj === "object") ? obj : {};
-  }catch{
-    return {};
-  }
-}
-
-function saveCustomSymbols(obj){
-  localStorage.setItem(CUSTOM_KEY, JSON.stringify(obj));
-}
-
-function allSymbols(){
-  return { ...defaultSymbols, ...loadCustomSymbols() };
-}
-
-// ===== Populate / defaults =====
-function populateSymbols(filterText=""){
+function populateSymbols(){
   const sel = $("symbol");
   if(!sel) return;
-
-  const symbols = allSymbols();
-  const keys = Object.keys(symbols);
-  const ft = String(filterText || "").trim().toUpperCase();
-
-  const list = ft ? keys.filter(k => k.includes(ft)) : keys;
 
   const current = sel.value || "EURUSD";
   sel.innerHTML = "";
 
-  list.forEach(k=>{
-    const opt = document.createElement("option");
-    opt.value = k;
-    opt.textContent = `${k} (${symbols[k].asset || "Asset"})`;
+  Object.keys(symbols).forEach(k=>{
+    const opt=document.createElement("option");
+    opt.value=k;
+    opt.textContent=`${k} (${symbols[k].asset})`;
     sel.appendChild(opt);
   });
 
-  if(list.includes(current)) sel.value = current;
-  else sel.value = list[0] || "";
-
-  if(sel.value) applySymbolDefaults(sel.value);
+  sel.value = symbols[current] ? current : "EURUSD";
+  applySymbolDefaults(sel.value);
 }
 
 function applySymbolDefaults(sym){
-  const cfg = allSymbols()[sym];
+  const cfg=symbols[sym];
   if(!cfg) return;
 
   const slLab = $("slUnitsLabel");
@@ -153,36 +123,20 @@ function applySymbolDefaults(sym){
   if(slLab) slLab.textContent = `SL (${cfg.unitName})`;
   if(tpLab) tpLab.textContent = `TP (${cfg.unitName})`;
 
-  if($("unitSize")) $("unitSize").value = String(cfg.unitSize).replace(".", ",");
-  if($("valuePerUnit")) $("valuePerUnit").value = String(cfg.valuePerUnit).replace(".", ",");
-  if($("lotStep")) $("lotStep").value = String(cfg.lotStep).replace(".", ",");
+  if($("unitSize")) $("unitSize").value = String(cfg.unitSize).replace(".",",");
+  if($("valuePerUnit")) $("valuePerUnit").value = String(cfg.valuePerUnit).replace(".",",");
+  if($("lotStep")) $("lotStep").value = String(cfg.lotStep).replace(".",",");
 }
 
-// ===== Lock logic (PRO feature) =====
+// ===== Loss Streak Lock =====
 function isLocked(){
-  const until = localStorage.getItem("lockUntil");
-  return until && Date.now() < parseInt(until, 10);
-}
-
-function applyLockUI(){
-  const locked = isLocked();
-
-  const lockStatus = $("lockStatus");
-  if(lockStatus){
-    lockStatus.textContent = !isPro ? "Pro required" : (locked ? "LOCKED ❌" : "Unlocked ✅");
-    lockStatus.className = !isPro ? "warn" : (locked ? "bad" : "ok");
-  }
-
-  const calcBtn = $("calcBtn");
-  if(calcBtn) calcBtn.disabled = locked;
-
-  const canTakeBtn = $("canTakeBtn");
-  if(canTakeBtn) canTakeBtn.disabled = locked || !isPro;
+  const until=localStorage.getItem("lockUntil");
+  return until && Date.now() < parseInt(until,10);
 }
 
 function triggerLock(){
   const cooldownMin = n("cooldownMin") || 120;
-  const until = Date.now() + cooldownMin * 60000;
+  const until = Date.now() + cooldownMin*60000;
   localStorage.setItem("lockUntil", String(until));
   applyLockUI();
 }
@@ -192,37 +146,88 @@ function resetLock(){
   applyLockUI();
 }
 
-// ===== PRO UI gating =====
+// ===== PRO UI LOCK (this was missing) =====
 function setProUI(){
+  // lock the whole challenge engine block
   const proControls = $("proControls");
   if(proControls){
     proControls.style.opacity = isPro ? "1" : "0.55";
     proControls.style.pointerEvents = isPro ? "auto" : "none";
   }
 
+  // mode button label
   const discBtn = $("disciplineModeBtn");
-  if(discBtn) discBtn.textContent = isPro ? "Discipline" : "Discipline 🔒";
+  if(discBtn){
+    discBtn.textContent = isPro ? "Discipline" : "Discipline 🔒";
+  }
 
-  // disable pro buttons when not pro
+  // presets buttons disabled when not PRO
   [
-    "canTakeBtn",
-    "winBtn","lossBtn","resetLockBtn",
-    "presetChallenge10K","presetChallenge25K","presetChallenge50K","presetChallenge100K"
+    "presetChallenge10K","presetChallenge25K","presetChallenge50K","presetChallenge100K",
+    // legacy ids (if exist)
+    "presetFTMO10K","presetFTMO25K","presetFTMO50K","presetFTMO100K"
   ].forEach(id=>{
     const b = $(id);
     if(b) b.disabled = !isPro;
   });
 
+  // loss-streak buttons disabled when not PRO
+  ["winBtn","lossBtn","resetLockBtn"].forEach(id=>{
+    const b = $(id);
+    if(b) b.disabled = !isPro;
+  });
+
+  // canTake disabled when not PRO (also respects lock)
+  const canTakeBtn = $("canTakeBtn");
+  if(canTakeBtn) canTakeBtn.disabled = !isPro || isLocked();
+
+  // calc is always FREE unless locked
+  const calcBtn = $("calcBtn");
+  if(calcBtn) calcBtn.disabled = isLocked();
+
   applyLockUI();
 }
 
-// ===== Challenge engine (PRO) =====
+// keep lock status text consistent with PRO
+function applyLockUI(){
+  const locked=isLocked();
+
+  const lockStatus = $("lockStatus");
+  if(lockStatus){
+    lockStatus.textContent = !isPro
+      ? "Pro required"
+      : (locked ? "LOCKED ❌" : "Unlocked ✅");
+    lockStatus.className = !isPro ? "warn" : (locked ? "bad" : "ok");
+  }
+
+  const lockHint = $("lockHint");
+  if(lockHint){
+    if(!isPro) lockHint.textContent = "Login to unlock loss-streak lock.";
+    else if(locked){
+      const until = parseInt(localStorage.getItem("lockUntil")||"0",10);
+      const mins = Math.max(0, Math.ceil((until - Date.now())/60000));
+      lockHint.textContent = `Cooldown active: ~${mins} min left`;
+    } else {
+      lockHint.textContent = "";
+    }
+  }
+
+  // buttons
+  const calcBtn = $("calcBtn");
+  if(calcBtn) calcBtn.disabled = locked;
+
+  const canTakeBtn = $("canTakeBtn");
+  if(canTakeBtn) canTakeBtn.disabled = locked || !isPro;
+}
+
+// ===== Prop Engine =====
 function runPropEngine(riskMoney){
   if(!isPro){
+    // keep outputs clean in FREE
     if($("remainingDailyOut")) $("remainingDailyOut").textContent = "-";
     if($("remainingOverallOut")) $("remainingOverallOut").textContent = "-";
     if($("tradeStatusOut")) $("tradeStatusOut").textContent = "-";
-    return "-";
+    return;
   }
 
   const acc=n("accountSize");
@@ -245,230 +250,200 @@ function runPropEngine(riskMoney){
   else if(riskMoney>remainingOverall) status="BLOCK Overall ❌";
 
   if($("tradeStatusOut")) $("tradeStatusOut").textContent=status;
-  return status;
+  if($("decisionOut")) $("decisionOut").textContent=status;
 }
 
-// ===== Calculator (SL buffer affects ONLY SL) =====
-// Supports optional inputs: slPriceIn, tpPriceIn, slBuffer
+// ===== Calculator =====
 function calculate(){
   if(isLocked()) return;
-
-  const sym = $("symbol")?.value || "EURUSD";
-  const cfg = allSymbols()[sym];
 
   const balance=n("balance");
   const riskPct=n("riskPct");
   const entry=n("entry");
-  const rr=n("rr") || 2;
-  const dir=$("direction") ? $("direction").value : "LONG";
-
+  const slUnits=n("slUnits");
+  const tpUnits=n("tpUnits");
   const unitSize=n("unitSize");
   const valuePerUnit=n("valuePerUnit");
-  const lotStep=n("lotStep") || (cfg?.lotStep || 0.01);
+  const lotStep=n("lotStep")||0.01;
+  const dir=$("direction") ? $("direction").value : "LONG";
 
-  // units inputs
-  let slUnits=n("slUnits");
-  let tpUnits=n("tpUnits");
+  const riskMoney=balance*(riskPct/100);
+  const lossPerLot=slUnits*valuePerUnit;
+  const lotsRaw=lossPerLot>0?riskMoney/lossPerLot:0;
+  const lots=roundDownStep(lotsRaw,lotStep);
 
-  // NEW optional price inputs (if fields exist)
-  const slPriceIn = n("slPriceIn"); // 0 if field missing
-  const tpPriceIn = n("tpPriceIn"); // 0 if field missing
+  const slDist=slUnits*unitSize;
+  const tpDist=tpUnits*unitSize;
 
-  // NEW SL buffer in units (pips/ticks/points)
-  const slBuffer = n("slBuffer"); // 0 if field missing
+  const slPrice=dir==="LONG"?entry-slDist:entry+slDist;
+  const tpPrice=dir==="LONG"?entry+tpDist:entry-tpDist;
 
-  // If SL price provided => derive units from price distance
-  if(slPriceIn > 0 && entry > 0 && unitSize > 0){
-    slUnits = Math.abs(entry - slPriceIn) / unitSize;
-  }
-
-  // FINAL SL units includes buffer (buffer affects only SL)
-  const finalSlUnits = Math.max(0, slUnits + Math.max(0, slBuffer));
-
-  // TP: if TP price provided => derive units
-  if(tpPriceIn > 0 && entry > 0 && unitSize > 0){
-    tpUnits = Math.abs(tpPriceIn - entry) / unitSize;
-  } else if(!tpUnits || tpUnits <= 0){
-    tpUnits = finalSlUnits * rr; // if empty -> RR from FINAL SL
-  }
-
-  // Risk calc
-  const riskMoney = balance*(riskPct/100);
-  const lossPerLot = finalSlUnits*valuePerUnit;
-  const lotsRaw = lossPerLot>0 ? riskMoney/lossPerLot : 0;
-  const lots = roundDownStep(lotsRaw, lotStep);
-
-  // Prices
-  let slPrice;
-  if(slPriceIn > 0){
-    // push SL further by buffer (in price)
-    const bufPrice = Math.max(0, slBuffer) * unitSize;
-    slPrice = (dir==="LONG") ? (slPriceIn - bufPrice) : (slPriceIn + bufPrice);
-  } else {
-    const slDist = finalSlUnits*unitSize;
-    slPrice = (dir==="LONG") ? entry - slDist : entry + slDist;
-  }
-
-  let tpPrice;
-  if(tpPriceIn > 0){
-    tpPrice = tpPriceIn; // TP unchanged by buffer
-  } else {
-    const tpDist = tpUnits*unitSize;
-    tpPrice = (dir==="LONG") ? entry + tpDist : entry - tpDist;
-  }
-
-  // Outputs
   if($("riskOut")) $("riskOut").textContent=fmt2(riskMoney);
   if($("lossPerLotOut")) $("lossPerLotOut").textContent=fmt2(lossPerLot);
   if($("lotsOut")) $("lotsOut").textContent=lots.toFixed(3);
-
-  if($("slUnitsOut")) $("slUnitsOut").textContent=finalSlUnits.toFixed(2).replace(/\.00$/,"");
-  if($("tpUnitsOut")) $("tpUnitsOut").textContent=tpUnits.toFixed(2).replace(/\.00$/,"");
-
+  if($("slUnitsOut")) $("slUnitsOut").textContent=slUnits;
+  if($("tpUnitsOut")) $("tpUnitsOut").textContent=tpUnits;
   if($("slPriceOut")) $("slPriceOut").textContent=fmtPrice(slPrice);
   if($("tpPriceOut")) $("tpPriceOut").textContent=fmtPrice(tpPrice);
 
-  const status = runPropEngine(riskMoney);
-  if($("decisionOut")) $("decisionOut").textContent = isPro ? status : "Pro required";
-
-  if($("clickStatus")) $("clickStatus").textContent = `Calculated ✅ (${sym})`;
+  runPropEngine(riskMoney);
 }
 
-// ===== Pro actions =====
+// ===== Can I Take Trade =====
 function canTakeTrade(){
   if(!isPro) return alert("Pro required. Please sign in.");
   if(isLocked()) return alert("Locked by loss-streak rule.");
   calculate();
 }
 
+// ===== Presets =====
 function applyPreset(size){
   if(!isPro) return alert("Pro required. Please sign in.");
-  if($("accountSize")) $("accountSize").value = String(size);
-  if($("dailyLossPct")) $("dailyLossPct").value = "5";
-  if($("maxLossPct")) $("maxLossPct").value = "10";
+  if($("accountSize")) $("accountSize").value=size;
+  if($("dailyLossPct")) $("dailyLossPct").value=5;
+  if($("maxLossPct")) $("maxLossPct").value=10;
   calculate();
 }
 
 // ===== Login =====
 function wireLogin(){
-  on("signUpBtn","click", async ()=>{
+  const signUp = $("signUpBtn");
+  const signIn = $("signInBtn");
+  const signOutBtn = $("signOutBtn");
+
+  if(signUp) signUp.onclick=async()=>{
     try{
-      await createUserWithEmailAndPassword(auth, ($("email")?.value||"").trim(), $("password")?.value||"");
-    }catch(e){ alert(e.message); }
-  });
-
-  on("signInBtn","click", async ()=>{
+      await createUserWithEmailAndPassword(auth, ($("email")?.value || "").trim(), $("password")?.value || "");
+    } catch(e){ alert(e.message); }
+  };
+  if(signIn) signIn.onclick=async()=>{
     try{
-      await signInWithEmailAndPassword(auth, ($("email")?.value||"").trim(), $("password")?.value||"");
-    }catch(e){ alert(e.message); }
-  });
+      await signInWithEmailAndPassword(auth, ($("email")?.value || "").trim(), $("password")?.value || "");
+    } catch(e){ alert(e.message); }
+  };
+  if(signOutBtn) signOutBtn.onclick=async()=>{ await signOut(auth); };
 
-  on("signOutBtn","click", async ()=>{
-    try{ await signOut(auth); }catch(e){ alert(e.message); }
-  });
-
-  onAuthStateChanged(auth, (user)=>{
-    isPro = !!user;
-    if($("userStatus")) $("userStatus").textContent = user ? `Signed in: ${user.email}` : "Not signed in";
+  onAuthStateChanged(auth,(user)=>{
+    isPro=!!user;
+    if($("userStatus")) $("userStatus").textContent=user?`Signed in: ${user.email}`:"Not signed in";
     setProUI();
     calculate();
   });
 }
 
-// ===== Symbol tools (search + add) =====
-function wireSymbolTools(){
-  on("symbolSearch","input",(e)=>{
-    populateSymbols(e.target.value || "");
-  });
+// ===== Wire UI =====
+document.addEventListener("DOMContentLoaded",()=>{
+  populateSymbols();
+  wireLogin();
+// ==========================
+// ===== SYMBOL SEARCH ======
+// ==========================
+on("symbolSearch","input",(e)=>{
+  const search = e.target.value.toUpperCase();
+  const sel = $("symbol");
+  if(!sel) return;
 
-  on("showAddSymbol","click",()=>{
-    const box = $("addSymbolBox");
-    if(!box) return;
-    const cur = box.style.display;
-    box.style.display = (!cur || cur === "none") ? "block" : "none";
-  });
+  sel.innerHTML = "";
 
-  on("addSymbolBtn","click",()=>{
-    const name = ($("customSymbolName")?.value || "").trim().toUpperCase();
-    const unitSize = toNum($("customUnitSize")?.value);
-    const vpu = toNum($("customValuePerUnit")?.value);
-    const step = toNum($("customLotStep")?.value);
+  Object.keys(symbols)
+    .filter(sym => sym.includes(search))
+    .forEach(sym=>{
+      const opt = document.createElement("option");
+      opt.value = sym;
+      opt.textContent = sym;
+      sel.appendChild(opt);
+    });
+});
 
-    if(!name) return alert("Enter symbol name.");
-    if(!(unitSize>0)) return alert("Enter Unit size.");
-    if(!(vpu>0)) return alert("Enter Value per unit.");
-    if(!(step>0)) return alert("Enter Lot step.");
+// ==========================
+// ===== TOGGLE ADD BOX =====
+// ==========================
+on("showAddSymbol","click",()=>{
+  const box = $("addSymbolBox");
+  if(!box) return;
+  box.style.display = box.style.display === "none" ? "block" : "none";
+});
 
-    const custom = loadCustomSymbols();
-    custom[name] = { asset:"Custom", unitName:"units", unitSize, valuePerUnit:vpu, lotStep:step };
-    saveCustomSymbols(custom);
+// ==========================
+// ===== SAVE CUSTOM SYMBOL =
+// ==========================
+on("addSymbolBtn","click",()=>{
+  const name = $("customSymbolName").value.trim().toUpperCase();
+  if(!name) return alert("Enter symbol name.");
 
-    populateSymbols($("symbolSearch")?.value || "");
-    const sel = $("symbol");
-    if(sel){
-      sel.value = name;
-      applySymbolDefaults(name);
-    }
+  symbols[name] = {
+    unitSize: parseFloat($("customUnitSize").value) || 1,
+    valuePerUnit: parseFloat($("customValuePerUnit").value) || 1,
+    lotStep: parseFloat($("customLotStep").value) || 0.01
+  };
 
-    const box = $("addSymbolBox");
-    if(box) box.style.display = "none";
+  populateSymbols();
+  $("symbol").value = name;
 
-    alert(`Saved: ${name}`);
-  });
+  $("addSymbolBox").style.display="none";
 
+  // uloženie do localStorage (aby sa nestratilo)
+  localStorage.setItem("customSymbols", JSON.stringify(symbols));
+});
   on("symbol","change",()=>{
-    applySymbolDefaults($("symbol")?.value);
+    applySymbolDefaults($("symbol").value);
     calculate();
   });
-}
 
-// ===== Loss streak buttons =====
-function wireLossStreak(){
+  on("calcBtn","click",calculate);
+  on("canTakeBtn","click",canTakeTrade);
+
+  // PRO lock button behavior: if someone clicks disabled via keyboard, show message
+  ["presetChallenge10K","presetChallenge25K","presetChallenge50K","presetChallenge100K"].forEach(id=>{
+    const b = $(id);
+    if(!b) return;
+    b.addEventListener("click", ()=> {
+      if(!isPro) return alert("Pro required. Please sign in.");
+    }, { capture:true });
+  });
+
   on("lossBtn","click",()=>{
     if(!isPro) return alert("Pro required. Please sign in.");
     const sEl = $("streakNow");
-    const cur = parseInt(sEl?.value || "0", 10);
+    const cur = parseInt(sEl?.value || "0",10);
     const next = cur + 1;
     if(sEl) sEl.value = String(next);
     if(next >= (n("maxStreak") || 3)) triggerLock();
     applyLockUI();
+    setProUI();
   });
 
   on("winBtn","click",()=>{
     if(!isPro) return alert("Pro required. Please sign in.");
-    if($("streakNow")) $("streakNow").value = "0";
+    if($("streakNow")) $("streakNow").value=0;
     applyLockUI();
+    setProUI();
   });
 
   on("resetLockBtn","click",()=>{
     if(!isPro) return alert("Pro required. Please sign in.");
     resetLock();
+    setProUI();
   });
-}
 
-// ===== Presets =====
-function wirePresets(){
-  [
+  // Presets (Challenge + legacy IDs)
+  const presetMap = [
     ["presetChallenge10K", 10000],
     ["presetChallenge25K", 25000],
     ["presetChallenge50K", 50000],
-    ["presetChallenge100K", 100000],
-  ].forEach(([id, size])=>{
-    on(id, "click", ()=> applyPreset(size));
+    ["presetChallenge100K",100000],
+
+    ["presetFTMO10K", 10000],
+    ["presetFTMO25K", 25000],
+    ["presetFTMO50K", 50000],
+    ["presetFTMO100K",100000],
+  ];
+  presetMap.forEach(([id, size]) => {
+    const el = $(id);
+    if(el) el.addEventListener("click", () => applyPreset(size));
   });
-}
 
-// ===== Wire UI =====
-document.addEventListener("DOMContentLoaded", ()=>{
-  populateSymbols("");
-  wireLogin();
-  wireSymbolTools();
-  wireLossStreak();
-  wirePresets();
-
-  on("calcBtn","click", calculate);
-  on("canTakeBtn","click", canTakeTrade);
-
+  // initial UI lock state
   setProUI();
   calculate();
 });
