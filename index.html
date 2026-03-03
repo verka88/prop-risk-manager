@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Pro Challenge Risk Tool</title>
 
 <style>
@@ -30,41 +30,22 @@
   .ok { color:#22c55e; font-weight:800; }
   .bad { color:#ef4444; font-weight:800; }
   .warn { color:#f59e0b; font-weight:800; }
+
+  /* Modal */
+  .modalBack { position:fixed; inset:0; background:rgba(0,0,0,.65); display:none; align-items:center; justify-content:center; padding:14px; }
+  .modal { width:min(760px, 100%); background:#151519; border:1px solid #2c2c35; border-radius:14px; padding:14px; }
+  .modalHead { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .xBtn { width:auto; padding:8px 12px; }
 </style>
 </head>
 
 <body>
 <div class="wrap">
-
-  <h2 style="margin:6px 0 14px;">Pro Challenge Risk Tool <span class="pill">Shows units + price</span></h2>
+  <h2 style="margin:6px 0 14px;">Pro Challenge Risk Tool <span class="pill">Units + price</span></h2>
 
   <div class="switch">
     <button id="quickModeBtn" type="button" class="modeBtn active">Quick</button>
-    <button id="disciplineModeBtn" type="button" class="modeBtn">Discipline 🔒</button>
-  </div>
-
-  <!-- LOGIN -->
-  <div class="card">
-    <h3 style="margin:0 0 8px; font-size:14px;">Pro Login</h3>
-
-    <div class="grid2">
-      <div>
-        <label>Email</label>
-        <input id="email" type="email" placeholder="you@email.com">
-      </div>
-      <div>
-        <label>Password</label>
-        <input id="password" type="password" placeholder="min. 6 chars">
-      </div>
-    </div>
-
-    <div class="grid3" style="margin-top:10px;">
-      <button id="signUpBtn" type="button">Create account</button>
-      <button id="signInBtn" type="button">Sign in</button>
-      <button id="signOutBtn" type="button">Sign out</button>
-    </div>
-
-    <div class="muted" id="userStatus" style="margin-top:8px;">Not signed in</div>
+    <button id="disciplineModeBtn" type="button" class="modeBtn">Discipline</button>
   </div>
 
   <!-- CALCULATOR -->
@@ -75,69 +56,13 @@
       <div>
         <label>Symbol</label>
 
-        <!-- ✅ SEARCH -->
-        <input id="symbolSearch" type="text" placeholder="Search symbol (e.g. EUR, XAU, BTC)" autocomplete="off">
+        <!-- Search -->
+        <input id="symbolSearch" type="text" placeholder="Search (e.g. EURUSD, XAU, BTC)..." />
 
         <select id="symbol" style="margin-top:8px;"></select>
 
-        <div style="margin-top:8px;">
-          <button id="addCustomSymbolBtn" type="button">+ Add Custom Symbol (FREE)</button>
-        </div>
         <div class="tiny muted">Custom symbols are saved on this device (LocalStorage).</div>
-
-        <!-- Custom panel -->
-        <div id="customPanel" class="card" style="margin-top:10px; display:none;">
-          <h3 style="margin:0 0 8px; font-size:14px;">Add Custom Symbol</h3>
-
-          <div class="grid3">
-            <div>
-              <label>Symbol name</label>
-              <input id="customName" type="text" placeholder="e.g. BTCUSDT or XAUUSD.m">
-            </div>
-            <div>
-              <label>Unit name</label>
-              <select id="customUnitName">
-                <option value="pips">pips</option>
-                <option value="ticks" selected>ticks</option>
-                <option value="points">points</option>
-                <option value="units">units</option>
-              </select>
-            </div>
-            <div>
-              <label>Asset group</label>
-              <select id="customAsset">
-                <option value="Custom" selected>Custom</option>
-                <option value="FX">FX</option>
-                <option value="Metals">Metals</option>
-                <option value="Index">Index</option>
-                <option value="Crypto">Crypto</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="grid3">
-            <div>
-              <label>Unit size</label>
-              <input id="customUnitSize" type="text" inputmode="decimal" placeholder="e.g. 0,01 or 1">
-            </div>
-            <div>
-              <label>Value per unit @ 1 lot (EUR)</label>
-              <input id="customValuePerUnit" type="text" inputmode="decimal" placeholder="e.g. 1 or 9,0">
-            </div>
-            <div>
-              <label>Lot step</label>
-              <input id="customLotStep" type="text" inputmode="decimal" placeholder="e.g. 0,01 or 0,001">
-            </div>
-          </div>
-
-          <div class="grid3" style="margin-top:10px;">
-            <button id="saveCustomBtn" type="button">Save symbol</button>
-            <button id="cancelCustomBtn" type="button">Cancel</button>
-            <button id="removeCustomBtn" type="button">Remove selected custom</button>
-          </div>
-
-          <div class="tiny muted" id="customMsg" style="margin-top:8px;"></div>
-        </div>
+        <button id="addCustomBtn" type="button" style="margin-top:8px;">+ Add Custom Symbol (FREE)</button>
       </div>
 
       <div>
@@ -150,55 +75,56 @@
 
       <div>
         <label>RR (if TP units empty)</label>
-        <input id="rr" type="text" inputmode="decimal" value="2">
-        <div class="tiny muted">Comma decimals supported (e.g. 1,8)</div>
+        <input id="rr" type="text" inputmode="decimal" value="2" />
+        <div class="tiny muted">Comma supported (e.g. 1,8)</div>
       </div>
     </div>
 
     <div class="grid3">
       <div>
         <label>Balance (EUR)</label>
-        <input id="balance" type="text" inputmode="decimal" value="10000">
+        <input id="balance" type="text" inputmode="decimal" value="10000" />
       </div>
       <div>
         <label>Risk %</label>
-        <input id="riskPct" type="text" inputmode="decimal" value="0,5">
+        <input id="riskPct" type="text" inputmode="decimal" value="0,5" />
       </div>
       <div>
         <label>Entry price</label>
-        <input id="entry" type="text" inputmode="decimal" value="1,10000">
+        <input id="entry" type="text" inputmode="decimal" value="1,10000" />
       </div>
     </div>
 
     <div class="grid3">
       <div>
         <label id="slUnitsLabel">SL (units)</label>
-        <input id="slUnits" type="text" inputmode="decimal" value="15">
+        <input id="slUnits" type="text" inputmode="decimal" value="15" />
       </div>
 
       <div>
         <label id="tpUnitsLabel">TP (units)</label>
-        <input id="tpUnits" type="text" inputmode="decimal" value="30">
+        <input id="tpUnits" type="text" inputmode="decimal" value="30" />
+        <div class="tiny muted">If empty → TP from RR</div>
       </div>
 
       <div>
         <label>TP buffer (price)</label>
-        <input id="tpBuffer" type="text" inputmode="decimal" value="0">
+        <input id="tpBuffer" type="text" inputmode="decimal" value="0" />
       </div>
     </div>
 
     <div class="grid3">
       <div>
         <label>Unit size (pip/tick/point)</label>
-        <input id="unitSize" type="text" inputmode="decimal" value="0,0001">
+        <input id="unitSize" type="text" inputmode="decimal" value="0,0001" />
       </div>
       <div>
         <label>Value per unit @ 1 lot (EUR)</label>
-        <input id="valuePerUnit" type="text" inputmode="decimal" value="9,0">
+        <input id="valuePerUnit" type="text" inputmode="decimal" value="9,0" />
       </div>
       <div>
         <label>Lot step</label>
-        <input id="lotStep" type="text" inputmode="decimal" value="0,01">
+        <input id="lotStep" type="text" inputmode="decimal" value="0,01" />
       </div>
     </div>
 
@@ -207,7 +133,7 @@
         <button id="calcBtn" type="button">Calculate</button>
       </div>
       <div style="display:flex; align-items:end;">
-        <button id="canTakeBtn" type="button">Can I take this trade? (Pro)</button>
+        <button id="canTakeBtn" type="button">Can I take this trade?</button>
       </div>
       <div style="display:flex; align-items:end;">
         <div class="muted" id="clickStatus"></div>
@@ -216,22 +142,22 @@
 
     <div class="divider"></div>
 
-    <!-- Loss-streak lock (Pro) -->
+    <!-- Loss-streak lock -->
     <div class="card" style="margin:0;">
-      <h3 style="margin:0 0 8px; font-size:14px;">Loss-streak lock (Pro)</h3>
+      <h3 style="margin:0 0 8px; font-size:14px;">Loss-streak lock (FREE)</h3>
 
       <div class="grid3">
         <div>
           <label>Max loss streak</label>
-          <input id="maxStreak" type="text" inputmode="numeric" value="3">
+          <input id="maxStreak" type="text" inputmode="numeric" value="3" />
         </div>
         <div>
           <label>Cooldown (minutes)</label>
-          <input id="cooldownMin" type="text" inputmode="numeric" value="120">
+          <input id="cooldownMin" type="text" inputmode="numeric" value="120" />
         </div>
         <div>
           <label>Current streak</label>
-          <input id="streakNow" type="text" inputmode="numeric" value="0">
+          <input id="streakNow" type="text" inputmode="numeric" value="0" />
         </div>
       </div>
 
@@ -242,7 +168,8 @@
       </div>
 
       <div class="muted" style="margin-top:10px;">
-        Status: <span id="lockStatus" class="warn">Pro required</span>
+        Status: <span id="lockStatus" class="ok">Unlocked ✅</span>
+        <div id="lockHint" class="tiny muted"></div>
       </div>
     </div>
   </div>
@@ -267,9 +194,9 @@
     </div>
   </div>
 
-  <!-- CHALLENGE ENGINE (PRO) -->
+  <!-- CHALLENGE ENGINE -->
   <div class="card">
-    <h3 style="margin:0 0 8px; font-size:14px;">Prop Challenge Engine (Pro)</h3>
+    <h3 style="margin:0 0 8px; font-size:14px;">Prop Challenge Engine (FREE)</h3>
 
     <div class="btnRow" style="margin-bottom:10px;">
       <button id="presetChallenge10K" type="button">Challenge 10K</button>
@@ -282,37 +209,84 @@
       <div class="grid3">
         <div>
           <label>Account size (EUR)</label>
-          <input id="accountSize" type="text" inputmode="decimal" value="10000">
+          <input id="accountSize" type="text" inputmode="decimal" value="10000" />
         </div>
         <div>
           <label>Daily loss %</label>
-          <input id="dailyLossPct" type="text" inputmode="decimal" value="5">
+          <input id="dailyLossPct" type="text" inputmode="decimal" value="5" />
         </div>
         <div>
           <label>Max loss %</label>
-          <input id="maxLossPct" type="text" inputmode="decimal" value="10">
+          <input id="maxLossPct" type="text" inputmode="decimal" value="10" />
         </div>
       </div>
 
       <div class="grid2">
         <div>
-          <label>Today PnL (EUR)</label>
-          <input id="todayPnl" type="text" inputmode="decimal" value="0">
+          <label>Today PnL (EUR) (e.g. -120 or +80)</label>
+          <input id="todayPnl" type="text" inputmode="decimal" value="0" />
         </div>
         <div>
           <label>Total PnL (EUR)</label>
-          <input id="totalPnL" type="text" inputmode="decimal" value="0">
+          <input id="totalPnL" type="text" inputmode="decimal" value="0" />
         </div>
       </div>
 
       <div class="row"><div>Remaining Daily (EUR)</div><div id="remainingDailyOut">-</div></div>
       <div class="row"><div>Remaining Overall (EUR)</div><div id="remainingOverallOut">-</div></div>
       <div class="row"><div>Trade Status</div><div id="tradeStatusOut">-</div></div>
+
+      <div class="muted" style="margin-top:10px;">
+        If your trade risk is bigger than Remaining Daily/Overall → the engine blocks it.
+      </div>
     </div>
   </div>
-
 </div>
 
-<script type="module" src="app.js?v=500"></script>
+<!-- Modal: Add Custom Symbol -->
+<div id="modalBack" class="modalBack">
+  <div class="modal">
+    <div class="modalHead">
+      <h3 style="margin:0; font-size:14px;">Add Custom Symbol</h3>
+      <button id="closeModalBtn" class="xBtn" type="button">✕</button>
+    </div>
+
+    <div class="grid3" style="margin-top:10px;">
+      <div>
+        <label>Symbol name</label>
+        <input id="csName" type="text" placeholder="e.g. EURGBP" />
+      </div>
+      <div>
+        <label>Unit size</label>
+        <input id="csUnitSize" type="text" inputmode="decimal" value="0,0001" />
+      </div>
+      <div>
+        <label>Value per unit @ 1 lot (EUR)</label>
+        <input id="csValuePerUnit" type="text" inputmode="decimal" value="9" />
+      </div>
+    </div>
+
+    <div class="grid3">
+      <div>
+        <label>Lot step</label>
+        <input id="csLotStep" type="text" inputmode="decimal" value="0,01" />
+      </div>
+      <div style="grid-column: span 2;">
+        <label>Unit label (optional)</label>
+        <input id="csUnitLabel" type="text" placeholder="pips / ticks / points / units" />
+      </div>
+    </div>
+
+    <div class="grid3" style="margin-top:10px;">
+      <button id="saveCustomBtn" type="button">Save symbol</button>
+      <button id="deleteCustomBtn" type="button">Delete selected custom</button>
+      <button id="cancelCustomBtn" type="button">Cancel</button>
+    </div>
+
+    <div class="tiny muted" id="modalHint" style="margin-top:8px;"></div>
+  </div>
+</div>
+
+<script type="module" src="./app.js?v=300"></script>
 </body>
 </html>
