@@ -1,305 +1,474 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pro Challenge Risk Tool</title>
+// ===== Firebase CDN =====
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
-<style>
-  body { background:#0b0b0c; color:#fff; font-family:Arial, system-ui; margin:0; }
-  .wrap { max-width:980px; margin:auto; padding:18px; }
-  .card { background:#151519; padding:14px; border-radius:14px; margin-bottom:12px; border:1px solid #24242a; }
-  label { font-size:12px; opacity:.85; display:block; margin:10px 0 6px; }
-  input, select { width:100%; padding:10px; background:#0f0f13; color:#fff; border:1px solid #2c2c35; border-radius:10px; }
-  button { width:100%; padding:12px; background:#1c1c24; color:white; border:1px solid #2c2c35; border-radius:12px; cursor:pointer; font-weight:700; }
-  button:hover { background:#232331; }
-  button:disabled { opacity:.55; cursor:not-allowed; }
-  .row { display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid #24242a; }
-  .row:last-child { border-bottom:0; }
-  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
-  .muted { font-size:12px; opacity:.75; line-height:1.35; }
-  .switch { display:flex; gap:10px; margin-bottom:12px; }
-  .modeBtn { flex:1; padding:10px; background:#1c1c24; border:1px solid #2c2c35; border-radius:12px; cursor:pointer; text-align:center; font-weight:700; }
-  .active { background:#2a2a35; }
-  .pill { display:inline-block; padding:2px 8px; border:1px solid #2c2c35; border-radius:999px; font-size:12px; opacity:.9; }
-  .tiny { font-size:11px; opacity:.8; margin-top:6px; }
-  .divider { height:1px; background:#24242a; margin:12px 0; }
-  .btnRow { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
-  @media (max-width:820px){ .grid2,.grid3{grid-template-columns:1fr;} .btnRow{grid-template-columns:repeat(2,1fr);} }
-  .ok { color:#22c55e; font-weight:800; }
-  .bad { color:#ef4444; font-weight:800; }
-  .warn { color:#f59e0b; font-weight:800; }
-</style>
-</head>
+const firebaseConfig = {
+  apiKey: "AIzaSyBo2yXF4Lg-BSTA034dxm8begvAvuO-7iw",
+  authDomain: "prop-risk-tool.firebaseapp.com",
+  projectId: "prop-risk-tool",
+  storageBucket: "prop-risk-tool.firebasestorage.app",
+  messagingSenderId: "205235413030",
+  appId: "1:205235413030:web:8b7fb4ebc86a48e794c6e7"
+};
 
-<body>
-<div class="wrap">
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 
-  <h2 style="margin:6px 0 14px;">Pro Challenge Risk Tool <span class="pill">Shows units + price</span></h2>
+// ===== Helpers =====
+const $ = (id) => document.getElementById(id);
 
-  <div class="switch">
-    <button id="quickModeBtn" type="button" class="modeBtn active">Quick</button>
-    <button id="disciplineModeBtn" type="button" class="modeBtn">Discipline 🔒</button>
-  </div>
+function toNum(v){
+  const s = String(v ?? "").trim().replace(",", ".");
+  const num = parseFloat(s);
+  return Number.isFinite(num) ? num : 0;
+}
 
-  <!-- LOGIN -->
-  <div class="card">
-    <h3 style="margin:0 0 8px; font-size:14px;">Pro Login</h3>
+function n(id){
+  const el = $(id);
+  if(!el) return 0;
+  return toNum(el.value);
+}
 
-    <div class="grid2">
-      <div>
-        <label>Email</label>
-        <input id="email" type="email" placeholder="you@email.com">
-      </div>
-      <div>
-        <label>Password</label>
-        <input id="password" type="password" placeholder="min. 6 chars">
-      </div>
-    </div>
+function fmt2(x){ return Number.isFinite(x) ? x.toFixed(2) : "-"; }
 
-    <div class="grid3" style="margin-top:10px;">
-      <button id="signUpBtn" type="button">Create account</button>
-      <button id="signInBtn" type="button">Sign in</button>
-      <button id="signOutBtn" type="button">Sign out</button>
-    </div>
+function fmtPrice(x){
+  if(!Number.isFinite(x)) return "-";
+  const ax = Math.abs(x);
+  const d = ax >= 100 ? 2 : ax >= 1 ? 4 : 6;
+  return x.toFixed(d);
+}
 
-    <div class="muted" id="userStatus" style="margin-top:8px;">Not signed in</div>
-  </div>
+function roundDownStep(value, step){
+  if(!Number.isFinite(value) || !Number.isFinite(step) || step<=0) return 0;
+  return Math.floor(value/step)*step;
+}
 
-  <!-- CALCULATOR -->
-  <div class="card">
-    <h3 style="margin:0 0 8px; font-size:14px;">Quick Calculator</h3>
+function on(id, event, fn){
+  const el = $(id);
+  if(!el) return;
+  el.addEventListener(event, fn);
+}
 
-    <div class="grid3">
-      <div>
-        <label>Symbol</label>
+// ===== Global State =====
+let isPro = false;
 
-        <input id="symbolSearch" type="text" placeholder="Search symbol..." style="margin-bottom:6px;" />
-        <select id="symbol"></select>
+// ===== Default symbols =====
+const defaultSymbols = {
+  // FX
+  "EURUSD": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
+  "GBPUSD": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
+  "AUDUSD": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
+  "NZDUSD": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
+  "USDCAD": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
+  "USDCHF": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
 
-        <div style="margin-top:8px;">
-          <button id="showAddSymbol" type="button">+ Add Custom Symbol</button>
-        </div>
+  "EURGBP": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
+  "EURCHF": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
+  "EURAUD": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
+  "GBPAUD": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
 
-        <div id="addSymbolBox" style="display:none; margin-top:10px;">
-          <input id="customSymbolName" placeholder="Symbol name (e.g. US500)" />
-          <input id="customUnitSize" placeholder="Unit size (e.g. 1)" />
-          <input id="customValuePerUnit" placeholder="Value per unit @1 lot (EUR)" />
-          <input id="customLotStep" placeholder="Lot step (e.g. 0.01)" />
-          <button id="addSymbolBtn" type="button">Save Symbol</button>
-          <div class="tiny muted">Saved to this browser (local storage).</div>
-        </div>
-      </div>
+  "USDJPY": { asset:"FX", unitName:"pips", unitSize:0.01, valuePerUnit:7.0, lotStep:0.01 },
+  "EURJPY": { asset:"FX", unitName:"pips", unitSize:0.01, valuePerUnit:7.0, lotStep:0.01 },
+  "GBPJPY": { asset:"FX", unitName:"pips", unitSize:0.01, valuePerUnit:7.0, lotStep:0.01 },
+  "AUDJPY": { asset:"FX", unitName:"pips", unitSize:0.01, valuePerUnit:7.0, lotStep:0.01 },
 
-      <div>
-        <label>Direction</label>
-        <select id="direction">
-          <option value="LONG">LONG</option>
-          <option value="SHORT">SHORT</option>
-        </select>
-      </div>
+  // Metals
+  "XAUUSD": { asset:"Metals", unitName:"ticks", unitSize:0.01, valuePerUnit:1.0, lotStep:0.01 },
+  "XAGUSD": { asset:"Metals", unitName:"ticks", unitSize:0.01, valuePerUnit:0.5, lotStep:0.01 },
 
-      <div>
-        <label>RR (if TP units empty)</label>
-        <input id="rr" type="text" inputmode="decimal" value="2">
-        <div class="tiny muted">Comma decimals supported (e.g. 1,8)</div>
-      </div>
-    </div>
+  // Indices
+  "NAS100": { asset:"Index", unitName:"points", unitSize:1, valuePerUnit:1.0, lotStep:0.01 },
+  "US30":   { asset:"Index", unitName:"points", unitSize:1, valuePerUnit:1.0, lotStep:0.01 },
+  "SPX500": { asset:"Index", unitName:"points", unitSize:1, valuePerUnit:1.0, lotStep:0.01 },
+  "GER40":  { asset:"Index", unitName:"points", unitSize:1, valuePerUnit:1.0, lotStep:0.01 },
+  "UK100":  { asset:"Index", unitName:"points", unitSize:1, valuePerUnit:1.0, lotStep:0.01 },
 
-    <div class="grid3">
-      <div>
-        <label>Balance (EUR)</label>
-        <input id="balance" type="text" inputmode="decimal" value="10000">
-      </div>
-      <div>
-        <label>Risk %</label>
-        <input id="riskPct" type="text" inputmode="decimal" value="0,5">
-      </div>
-      <div>
-        <label>Entry price</label>
-        <input id="entry" type="text" inputmode="decimal" value="1,10000">
-      </div>
-    </div>
+  // Crypto
+  "BTCUSD": { asset:"Crypto", unitName:"ticks", unitSize:1, valuePerUnit:1.0, lotStep:0.001 },
+  "ETHUSD": { asset:"Crypto", unitName:"ticks", unitSize:0.1, valuePerUnit:0.1, lotStep:0.001 },
+  "SOLUSD": { asset:"Crypto", unitName:"ticks", unitSize:0.01, valuePerUnit:0.01, lotStep:0.001 },
+  "XRPUSD": { asset:"Crypto", unitName:"ticks", unitSize:0.0001, valuePerUnit:0.0001, lotStep:0.001 }
+};
 
-    <!-- ✅ NEW: SL/TP PRICE inputs -->
-    <div class="grid3">
-      <div>
-        <label>SL price (optional)</label>
-        <input id="slPriceIn" type="text" inputmode="decimal" placeholder="e.g. 1,09850">
-        <div class="tiny muted">If filled, SL units auto-calc from price.</div>
-      </div>
-      <div>
-        <label>TP price (optional)</label>
-        <input id="tpPriceIn" type="text" inputmode="decimal" placeholder="e.g. 1,10450">
-        <div class="tiny muted">If filled, TP units auto-calc from price.</div>
-      </div>
-      <div>
-        <label>SL Buffer (pips/ticks/points)</label>
-        <input id="slBuffer" type="text" inputmode="decimal" value="0">
-        <div class="tiny muted">Adds extra units to SL only.</div>
-      </div>
-    </div>
+// ===== Custom symbols storage =====
+const CUSTOM_KEY = "customSymbols_v1";
 
-    <div class="grid3">
-      <div>
-        <label id="slUnitsLabel">SL (pips/ticks)</label>
-        <input id="slUnits" type="text" inputmode="decimal" value="15">
-        <div class="muted">Example: SL = 15 units</div>
-      </div>
+function loadCustomSymbols(){
+  try{
+    const raw = localStorage.getItem(CUSTOM_KEY);
+    const obj = raw ? JSON.parse(raw) : {};
+    return (obj && typeof obj === "object") ? obj : {};
+  }catch{
+    return {};
+  }
+}
 
-      <div>
-        <label id="tpUnitsLabel">TP (pips/ticks)</label>
-        <input id="tpUnits" type="text" inputmode="decimal" value="30">
-        <div class="muted">Example: TP = 30 units (or leave empty)</div>
-      </div>
+function saveCustomSymbols(obj){
+  localStorage.setItem(CUSTOM_KEY, JSON.stringify(obj));
+}
 
-      <div>
-        <label>Lot step</label>
-        <input id="lotStep" type="text" inputmode="decimal" value="0,01">
-        <div class="muted">Editable override</div>
-      </div>
-    </div>
+function allSymbols(){
+  return { ...defaultSymbols, ...loadCustomSymbols() };
+}
 
-    <div class="grid3">
-      <div>
-        <label>Unit size (pip/tick)</label>
-        <input id="unitSize" type="text" inputmode="decimal" value="0,0001">
-        <div class="muted">Editable override</div>
-      </div>
-      <div>
-        <label>Value per unit @ 1 lot (EUR)</label>
-        <input id="valuePerUnit" type="text" inputmode="decimal" value="9,0">
-        <div class="muted">Most important for accuracy</div>
-      </div>
-      <div>
-        <div class="tiny muted" style="margin-top:28px;">
-          Tip: For perfect accuracy across brokers, adjust Value per unit.
-        </div>
-      </div>
-    </div>
+// ===== Populate / defaults =====
+function populateSymbols(filterText=""){
+  const sel = $("symbol");
+  if(!sel) return;
 
-    <div class="grid3">
-      <div style="display:flex; align-items:end;">
-        <button id="calcBtn" type="button">Calculate</button>
-      </div>
-      <div style="display:flex; align-items:end;">
-        <button id="canTakeBtn" type="button">Can I take this trade? (Pro)</button>
-      </div>
-      <div style="display:flex; align-items:end;">
-        <div class="muted" id="clickStatus"></div>
-      </div>
-    </div>
+  const symbols = allSymbols();
+  const keys = Object.keys(symbols);
+  const ft = String(filterText || "").trim().toUpperCase();
 
-    <div class="divider"></div>
+  const list = ft ? keys.filter(k => k.includes(ft)) : keys;
 
-    <!-- Loss-streak lock (Pro) -->
-    <div class="card" style="margin:0;">
-      <h3 style="margin:0 0 8px; font-size:14px;">Loss-streak lock (Pro)</h3>
+  const current = sel.value || "EURUSD";
+  sel.innerHTML = "";
 
-      <div class="grid3">
-        <div>
-          <label>Max loss streak</label>
-          <input id="maxStreak" type="text" inputmode="numeric" value="3">
-        </div>
-        <div>
-          <label>Cooldown (minutes)</label>
-          <input id="cooldownMin" type="text" inputmode="numeric" value="120">
-        </div>
-        <div>
-          <label>Current streak</label>
-          <input id="streakNow" type="text" inputmode="numeric" value="0">
-        </div>
-      </div>
+  list.forEach(k=>{
+    const opt = document.createElement("option");
+    opt.value = k;
+    opt.textContent = `${k} (${symbols[k].asset || "Asset"})`;
+    sel.appendChild(opt);
+  });
 
-      <div class="grid3" style="margin-top:10px;">
-        <button id="winBtn" type="button">Win ✅ (reset)</button>
-        <button id="lossBtn" type="button">Loss ❌ (+1)</button>
-        <button id="resetLockBtn" type="button">Reset lock</button>
-      </div>
+  if(list.includes(current)) sel.value = current;
+  else sel.value = list[0] || "";
 
-      <div class="muted" style="margin-top:10px;">
-        Status: <span id="lockStatus" class="warn">Pro required</span>
-        <div id="lockHint" class="tiny muted"></div>
-      </div>
-    </div>
-  </div>
+  if(sel.value) applySymbolDefaults(sel.value);
+}
 
-  <!-- RESULTS -->
-  <div class="card">
-    <h3 style="margin:0 0 8px; font-size:14px;">Results</h3>
-    <div class="row"><div>Risk (EUR)</div><div id="riskOut">-</div></div>
-    <div class="row"><div>Loss per 1 lot (EUR)</div><div id="lossPerLotOut">-</div></div>
-    <div class="row"><div>Position size (lots)</div><div id="lotsOut">-</div></div>
+function applySymbolDefaults(sym){
+  const cfg = allSymbols()[sym];
+  if(!cfg) return;
 
-    <div class="row"><div>SL distance (units)</div><div id="slUnitsOut">-</div></div>
-    <div class="row"><div>TP distance (units)</div><div id="tpUnitsOut">-</div></div>
+  const slLab = $("slUnitsLabel");
+  const tpLab = $("tpUnitsLabel");
+  if(slLab) slLab.textContent = `SL (${cfg.unitName})`;
+  if(tpLab) tpLab.textContent = `TP (${cfg.unitName})`;
 
-    <div class="row"><div>SL price</div><div id="slPriceOut">-</div></div>
-    <div class="row"><div>TP price</div><div id="tpPriceOut">-</div></div>
+  if($("unitSize")) $("unitSize").value = String(cfg.unitSize).replace(".", ",");
+  if($("valuePerUnit")) $("valuePerUnit").value = String(cfg.valuePerUnit).replace(".", ",");
+  if($("lotStep")) $("lotStep").value = String(cfg.lotStep).replace(".", ",");
+}
 
-    <div class="divider"></div>
-    <div class="row">
-      <div>Decision (Can I take this trade?)</div>
-      <div id="decisionOut">-</div>
-    </div>
-  </div>
+// ===== Lock logic (PRO feature) =====
+function isLocked(){
+  const until = localStorage.getItem("lockUntil");
+  return until && Date.now() < parseInt(until, 10);
+}
 
-  <!-- CHALLENGE ENGINE (PRO) -->
-  <div class="card">
-    <h3 style="margin:0 0 8px; font-size:14px;">Prop Challenge Engine (Pro)</h3>
+function applyLockUI(){
+  const locked = isLocked();
 
-    <div class="btnRow" style="margin-bottom:10px;">
-      <button id="presetChallenge10K" type="button">Challenge 10K</button>
-      <button id="presetChallenge25K" type="button">Challenge 25K</button>
-      <button id="presetChallenge50K" type="button">Challenge 50K</button>
-      <button id="presetChallenge100K" type="button">Challenge 100K</button>
-    </div>
+  const lockStatus = $("lockStatus");
+  if(lockStatus){
+    lockStatus.textContent = !isPro ? "Pro required" : (locked ? "LOCKED ❌" : "Unlocked ✅");
+    lockStatus.className = !isPro ? "warn" : (locked ? "bad" : "ok");
+  }
 
-    <div id="proControls">
-      <div class="grid3">
-        <div>
-          <label>Account size (EUR)</label>
-          <input id="accountSize" type="text" inputmode="decimal" value="10000">
-        </div>
-        <div>
-          <label>Daily loss %</label>
-          <input id="dailyLossPct" type="text" inputmode="decimal" value="5">
-        </div>
-        <div>
-          <label>Max loss %</label>
-          <input id="maxLossPct" type="text" inputmode="decimal" value="10">
-        </div>
-      </div>
+  const calcBtn = $("calcBtn");
+  if(calcBtn) calcBtn.disabled = locked;
 
-      <div class="grid2">
-        <div>
-          <label>Today PnL (EUR) (e.g. -120 or +80)</label>
-          <input id="todayPnl" type="text" inputmode="decimal" value="0">
-        </div>
-        <div>
-          <label>Total PnL (EUR)</label>
-          <input id="totalPnL" type="text" inputmode="decimal" value="0">
-        </div>
-      </div>
+  const canTakeBtn = $("canTakeBtn");
+  if(canTakeBtn) canTakeBtn.disabled = locked || !isPro;
+}
 
-      <div class="row"><div>Remaining Daily (EUR)</div><div id="remainingDailyOut">-</div></div>
-      <div class="row"><div>Remaining Overall (EUR)</div><div id="remainingOverallOut">-</div></div>
-      <div class="row"><div>Trade Status</div><div id="tradeStatusOut">-</div></div>
+function triggerLock(){
+  const cooldownMin = n("cooldownMin") || 120;
+  const until = Date.now() + cooldownMin * 60000;
+  localStorage.setItem("lockUntil", String(until));
+  applyLockUI();
+}
 
-      <div class="muted" style="margin-top:10px;">
-        If your trade risk is bigger than Remaining Daily/Overall → the engine blocks it.
-      </div>
-    </div>
+function resetLock(){
+  localStorage.removeItem("lockUntil");
+  applyLockUI();
+}
 
-    <div class="muted" style="margin-top:10px;">
-      Pro unlock = login. (Later you can connect payments and unlock only paid plans.)
-    </div>
-  </div>
+// ===== PRO UI gating =====
+function setProUI(){
+  const proControls = $("proControls");
+  if(proControls){
+    proControls.style.opacity = isPro ? "1" : "0.55";
+    proControls.style.pointerEvents = isPro ? "auto" : "none";
+  }
 
-</div>
+  const discBtn = $("disciplineModeBtn");
+  if(discBtn) discBtn.textContent = isPro ? "Discipline" : "Discipline 🔒";
 
-<!-- bump version to bust cache -->
-<script type="module" src="app.js?v=201"></script>
-</body>
-</html>
+  // disable pro buttons when not pro
+  [
+    "canTakeBtn",
+    "winBtn","lossBtn","resetLockBtn",
+    "presetChallenge10K","presetChallenge25K","presetChallenge50K","presetChallenge100K"
+  ].forEach(id=>{
+    const b = $(id);
+    if(b) b.disabled = !isPro;
+  });
+
+  applyLockUI();
+}
+
+// ===== Challenge engine (PRO) =====
+function runPropEngine(riskMoney){
+  if(!isPro){
+    if($("remainingDailyOut")) $("remainingDailyOut").textContent = "-";
+    if($("remainingOverallOut")) $("remainingOverallOut").textContent = "-";
+    if($("tradeStatusOut")) $("tradeStatusOut").textContent = "-";
+    return "-";
+  }
+
+  const acc=n("accountSize");
+  const dailyPct=n("dailyLossPct");
+  const maxPct=n("maxLossPct");
+  const totalPnL=n("totalPnL");
+  const todayPnl=n("todayPnl");
+
+  const dailyLimit=acc*(dailyPct/100);
+  const maxLimit=acc*(maxPct/100);
+
+  const remainingDaily=dailyLimit+todayPnl;
+  const remainingOverall=maxLimit+totalPnL;
+
+  if($("remainingDailyOut")) $("remainingDailyOut").textContent=fmt2(remainingDaily);
+  if($("remainingOverallOut")) $("remainingOverallOut").textContent=fmt2(remainingOverall);
+
+  let status="OK ✅";
+  if(riskMoney>remainingDaily) status="BLOCK Daily ❌";
+  else if(riskMoney>remainingOverall) status="BLOCK Overall ❌";
+
+  if($("tradeStatusOut")) $("tradeStatusOut").textContent=status;
+  return status;
+}
+
+// ===== Calculator (SL buffer affects ONLY SL) =====
+// Supports optional inputs: slPriceIn, tpPriceIn, slBuffer
+function calculate(){
+  if(isLocked()) return;
+
+  const sym = $("symbol")?.value || "EURUSD";
+  const cfg = allSymbols()[sym];
+
+  const balance=n("balance");
+  const riskPct=n("riskPct");
+  const entry=n("entry");
+  const rr=n("rr") || 2;
+  const dir=$("direction") ? $("direction").value : "LONG";
+
+  const unitSize=n("unitSize");
+  const valuePerUnit=n("valuePerUnit");
+  const lotStep=n("lotStep") || (cfg?.lotStep || 0.01);
+
+  // units inputs
+  let slUnits=n("slUnits");
+  let tpUnits=n("tpUnits");
+
+  // NEW optional price inputs (if fields exist)
+  const slPriceIn = n("slPriceIn"); // 0 if field missing
+  const tpPriceIn = n("tpPriceIn"); // 0 if field missing
+
+  // NEW SL buffer in units (pips/ticks/points)
+  const slBuffer = n("slBuffer"); // 0 if field missing
+
+  // If SL price provided => derive units from price distance
+  if(slPriceIn > 0 && entry > 0 && unitSize > 0){
+    slUnits = Math.abs(entry - slPriceIn) / unitSize;
+  }
+
+  // FINAL SL units includes buffer (buffer affects only SL)
+  const finalSlUnits = Math.max(0, slUnits + Math.max(0, slBuffer));
+
+  // TP: if TP price provided => derive units
+  if(tpPriceIn > 0 && entry > 0 && unitSize > 0){
+    tpUnits = Math.abs(tpPriceIn - entry) / unitSize;
+  } else if(!tpUnits || tpUnits <= 0){
+    tpUnits = finalSlUnits * rr; // if empty -> RR from FINAL SL
+  }
+
+  // Risk calc
+  const riskMoney = balance*(riskPct/100);
+  const lossPerLot = finalSlUnits*valuePerUnit;
+  const lotsRaw = lossPerLot>0 ? riskMoney/lossPerLot : 0;
+  const lots = roundDownStep(lotsRaw, lotStep);
+
+  // Prices
+  let slPrice;
+  if(slPriceIn > 0){
+    // push SL further by buffer (in price)
+    const bufPrice = Math.max(0, slBuffer) * unitSize;
+    slPrice = (dir==="LONG") ? (slPriceIn - bufPrice) : (slPriceIn + bufPrice);
+  } else {
+    const slDist = finalSlUnits*unitSize;
+    slPrice = (dir==="LONG") ? entry - slDist : entry + slDist;
+  }
+
+  let tpPrice;
+  if(tpPriceIn > 0){
+    tpPrice = tpPriceIn; // TP unchanged by buffer
+  } else {
+    const tpDist = tpUnits*unitSize;
+    tpPrice = (dir==="LONG") ? entry + tpDist : entry - tpDist;
+  }
+
+  // Outputs
+  if($("riskOut")) $("riskOut").textContent=fmt2(riskMoney);
+  if($("lossPerLotOut")) $("lossPerLotOut").textContent=fmt2(lossPerLot);
+  if($("lotsOut")) $("lotsOut").textContent=lots.toFixed(3);
+
+  if($("slUnitsOut")) $("slUnitsOut").textContent=finalSlUnits.toFixed(2).replace(/\.00$/,"");
+  if($("tpUnitsOut")) $("tpUnitsOut").textContent=tpUnits.toFixed(2).replace(/\.00$/,"");
+
+  if($("slPriceOut")) $("slPriceOut").textContent=fmtPrice(slPrice);
+  if($("tpPriceOut")) $("tpPriceOut").textContent=fmtPrice(tpPrice);
+
+  const status = runPropEngine(riskMoney);
+  if($("decisionOut")) $("decisionOut").textContent = isPro ? status : "Pro required";
+
+  if($("clickStatus")) $("clickStatus").textContent = `Calculated ✅ (${sym})`;
+}
+
+// ===== Pro actions =====
+function canTakeTrade(){
+  if(!isPro) return alert("Pro required. Please sign in.");
+  if(isLocked()) return alert("Locked by loss-streak rule.");
+  calculate();
+}
+
+function applyPreset(size){
+  if(!isPro) return alert("Pro required. Please sign in.");
+  if($("accountSize")) $("accountSize").value = String(size);
+  if($("dailyLossPct")) $("dailyLossPct").value = "5";
+  if($("maxLossPct")) $("maxLossPct").value = "10";
+  calculate();
+}
+
+// ===== Login =====
+function wireLogin(){
+  on("signUpBtn","click", async ()=>{
+    try{
+      await createUserWithEmailAndPassword(auth, ($("email")?.value||"").trim(), $("password")?.value||"");
+    }catch(e){ alert(e.message); }
+  });
+
+  on("signInBtn","click", async ()=>{
+    try{
+      await signInWithEmailAndPassword(auth, ($("email")?.value||"").trim(), $("password")?.value||"");
+    }catch(e){ alert(e.message); }
+  });
+
+  on("signOutBtn","click", async ()=>{
+    try{ await signOut(auth); }catch(e){ alert(e.message); }
+  });
+
+  onAuthStateChanged(auth, (user)=>{
+    isPro = !!user;
+    if($("userStatus")) $("userStatus").textContent = user ? `Signed in: ${user.email}` : "Not signed in";
+    setProUI();
+    calculate();
+  });
+}
+
+// ===== Symbol tools (search + add) =====
+function wireSymbolTools(){
+  on("symbolSearch","input",(e)=>{
+    populateSymbols(e.target.value || "");
+  });
+
+  on("showAddSymbol","click",()=>{
+    const box = $("addSymbolBox");
+    if(!box) return;
+    const cur = box.style.display;
+    box.style.display = (!cur || cur === "none") ? "block" : "none";
+  });
+
+  on("addSymbolBtn","click",()=>{
+    const name = ($("customSymbolName")?.value || "").trim().toUpperCase();
+    const unitSize = toNum($("customUnitSize")?.value);
+    const vpu = toNum($("customValuePerUnit")?.value);
+    const step = toNum($("customLotStep")?.value);
+
+    if(!name) return alert("Enter symbol name.");
+    if(!(unitSize>0)) return alert("Enter Unit size.");
+    if(!(vpu>0)) return alert("Enter Value per unit.");
+    if(!(step>0)) return alert("Enter Lot step.");
+
+    const custom = loadCustomSymbols();
+    custom[name] = { asset:"Custom", unitName:"units", unitSize, valuePerUnit:vpu, lotStep:step };
+    saveCustomSymbols(custom);
+
+    populateSymbols($("symbolSearch")?.value || "");
+    const sel = $("symbol");
+    if(sel){
+      sel.value = name;
+      applySymbolDefaults(name);
+    }
+
+    const box = $("addSymbolBox");
+    if(box) box.style.display = "none";
+
+    alert(`Saved: ${name}`);
+  });
+
+  on("symbol","change",()=>{
+    applySymbolDefaults($("symbol")?.value);
+    calculate();
+  });
+}
+
+// ===== Loss streak buttons =====
+function wireLossStreak(){
+  on("lossBtn","click",()=>{
+    if(!isPro) return alert("Pro required. Please sign in.");
+    const sEl = $("streakNow");
+    const cur = parseInt(sEl?.value || "0", 10);
+    const next = cur + 1;
+    if(sEl) sEl.value = String(next);
+    if(next >= (n("maxStreak") || 3)) triggerLock();
+    applyLockUI();
+  });
+
+  on("winBtn","click",()=>{
+    if(!isPro) return alert("Pro required. Please sign in.");
+    if($("streakNow")) $("streakNow").value = "0";
+    applyLockUI();
+  });
+
+  on("resetLockBtn","click",()=>{
+    if(!isPro) return alert("Pro required. Please sign in.");
+    resetLock();
+  });
+}
+
+// ===== Presets =====
+function wirePresets(){
+  [
+    ["presetChallenge10K", 10000],
+    ["presetChallenge25K", 25000],
+    ["presetChallenge50K", 50000],
+    ["presetChallenge100K", 100000],
+  ].forEach(([id, size])=>{
+    on(id, "click", ()=> applyPreset(size));
+  });
+}
+
+// ===== Wire UI =====
+document.addEventListener("DOMContentLoaded", ()=>{
+  populateSymbols("");
+  wireLogin();
+  wireSymbolTools();
+  wireLossStreak();
+  wirePresets();
+
+  on("calcBtn","click", calculate);
+  on("canTakeBtn","click", canTakeTrade);
+
+  setProUI();
+  calculate();
+});
