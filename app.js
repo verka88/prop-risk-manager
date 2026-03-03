@@ -56,36 +56,80 @@ function on(id, event, fn){
 // ===== Global State =====
 let isPro = false;
 
-// ===== Symbol presets =====
+// ===== Symbol presets (editable defaults) =====
+// valuePerUnit = EUR value of 1 unit (pip/tick/point) at 1.00 lot.
+// NOTE: Brokers differ. These are defaults; user can override in inputs.
 const symbols = {
-  "EURUSD": { unitSize:0.0001, valuePerUnit:9, lotStep:0.01 },
-  "USDJPY": { unitSize:0.01, valuePerUnit:7, lotStep:0.01 },
-  "XAUUSD": { unitSize:0.01, valuePerUnit:0.91, lotStep:0.01 },
-  "BTCUSD": { unitSize:1, valuePerUnit:0.9, lotStep:0.001 }
+  // ===== FX (major, non-JPY) =====
+  "EURUSD": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
+  "GBPUSD": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
+  "AUDUSD": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
+  "NZDUSD": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
+  "USDCAD": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
+  "USDCHF": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
+
+  // ===== FX (crosses) =====
+  "EURGBP": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
+  "EURCHF": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
+  "EURAUD": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
+  "GBPAUD": { asset:"FX", unitName:"pips", unitSize:0.0001, valuePerUnit:9.0, lotStep:0.01 },
+
+  // ===== FX (JPY pairs) =====
+  "USDJPY": { asset:"FX", unitName:"pips", unitSize:0.01, valuePerUnit:7.0, lotStep:0.01 },
+  "EURJPY": { asset:"FX", unitName:"pips", unitSize:0.01, valuePerUnit:7.0, lotStep:0.01 },
+  "GBPJPY": { asset:"FX", unitName:"pips", unitSize:0.01, valuePerUnit:7.0, lotStep:0.01 },
+  "AUDJPY": { asset:"FX", unitName:"pips", unitSize:0.01, valuePerUnit:7.0, lotStep:0.01 },
+
+  // ===== Metals =====
+  "XAUUSD": { asset:"Metals", unitName:"ticks", unitSize:0.01, valuePerUnit:1.0, lotStep:0.01 },
+  "XAGUSD": { asset:"Metals", unitName:"ticks", unitSize:0.01, valuePerUnit:0.5, lotStep:0.01 },
+
+  // ===== Indices (CFD defaults) =====
+  "NAS100": { asset:"Index", unitName:"points", unitSize:1, valuePerUnit:1.0, lotStep:0.01 },
+  "US30":   { asset:"Index", unitName:"points", unitSize:1, valuePerUnit:1.0, lotStep:0.01 },
+  "SPX500": { asset:"Index", unitName:"points", unitSize:1, valuePerUnit:1.0, lotStep:0.01 },
+  "GER40":  { asset:"Index", unitName:"points", unitSize:1, valuePerUnit:1.0, lotStep:0.01 },
+  "UK100":  { asset:"Index", unitName:"points", unitSize:1, valuePerUnit:1.0, lotStep:0.01 },
+
+  // ===== Crypto =====
+  "BTCUSD": { asset:"Crypto", unitName:"ticks", unitSize:1, valuePerUnit:1.0, lotStep:0.001 },
+  "ETHUSD": { asset:"Crypto", unitName:"ticks", unitSize:0.1, valuePerUnit:0.1, lotStep:0.001 },
+  "SOLUSD": { asset:"Crypto", unitName:"ticks", unitSize:0.01, valuePerUnit:0.01, lotStep:0.001 },
+  "XRPUSD": { asset:"Crypto", unitName:"ticks", unitSize:0.0001, valuePerUnit:0.0001, lotStep:0.001 }
 };
 
 function populateSymbols(){
   const sel = $("symbol");
   if(!sel) return;
 
+  const current = sel.value || "EURUSD";
   sel.innerHTML = "";
+
   Object.keys(symbols).forEach(k=>{
     const opt=document.createElement("option");
     opt.value=k;
-    opt.textContent=k;
+    opt.textContent=`${k} (${symbols[k].asset})`;
     sel.appendChild(opt);
   });
-  sel.value="EURUSD";
-  applySymbolDefaults("EURUSD");
+
+  sel.value = symbols[current] ? current : "EURUSD";
+  applySymbolDefaults(sel.value);
 }
 
 function applySymbolDefaults(sym){
   const cfg=symbols[sym];
   if(!cfg) return;
 
-  if($("unitSize")) $("unitSize").value=cfg.unitSize;
-  if($("valuePerUnit")) $("valuePerUnit").value=cfg.valuePerUnit;
-  if($("lotStep")) $("lotStep").value=cfg.lotStep;
+  // update labels to match unit type
+  const slLab = $("slUnitsLabel");
+  const tpLab = $("tpUnitsLabel");
+  if(slLab) slLab.textContent = `SL (${cfg.unitName})`;
+  if(tpLab) tpLab.textContent = `TP (${cfg.unitName})`;
+
+  // set defaults (still editable)
+  if($("unitSize")) $("unitSize").value = String(cfg.unitSize).replace(".",",");
+  if($("valuePerUnit")) $("valuePerUnit").value = String(cfg.valuePerUnit).replace(".",",");
+  if($("lotStep")) $("lotStep").value = String(cfg.lotStep).replace(".",",");
 }
 
 // ===== Loss Streak Lock =====
@@ -255,7 +299,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 
   on("resetLockBtn","click",resetLock);
 
-  // ✅ FIX: Presets work with BOTH old IDs (presetFTMO...) and new IDs (presetChallenge...)
+  // Presets (Challenge + legacy IDs)
   const presetMap = [
     ["presetChallenge10K", 10000],
     ["presetChallenge25K", 25000],
