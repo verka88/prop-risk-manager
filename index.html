@@ -75,7 +75,12 @@
       <div>
         <label>Symbol</label>
         <select id="symbol"></select>
+        <div style="margin-top:8px;">
+          <button id="addCustomSymbolBtn" type="button">+ Add Custom Symbol</button>
+        </div>
+        <div class="tiny muted">Custom symbols are saved on this device (LocalStorage).</div>
       </div>
+
       <div>
         <label>Direction</label>
         <select id="direction">
@@ -83,6 +88,7 @@
           <option value="SHORT">SHORT</option>
         </select>
       </div>
+
       <div>
         <label>RR (if TP units empty)</label>
         <input id="rr" type="text" inputmode="decimal" value="2">
@@ -107,13 +113,13 @@
 
     <div class="grid3">
       <div>
-        <label id="slUnitsLabel">SL (pips/ticks)</label>
+        <label id="slUnitsLabel">SL (units)</label>
         <input id="slUnits" type="text" inputmode="decimal" value="15">
         <div class="muted">Example: SL = 15 units</div>
       </div>
 
       <div>
-        <label id="tpUnitsLabel">TP (pips/ticks)</label>
+        <label id="tpUnitsLabel">TP (units)</label>
         <input id="tpUnits" type="text" inputmode="decimal" value="30">
         <div class="muted">Example: TP = 30 units (or leave empty)</div>
       </div>
@@ -127,7 +133,7 @@
 
     <div class="grid3">
       <div>
-        <label>Unit size (pip/tick)</label>
+        <label>Unit size (pip/tick/point)</label>
         <input id="unitSize" type="text" inputmode="decimal" value="0,0001">
         <div class="muted">Editable override</div>
       </div>
@@ -263,6 +269,6 @@
 </div>
 
 <!-- bump version to bust cache -->
-<script type="module" src="app.js?v=200"></script>
+<script type="module" src="app.js?v=300"></script>
 </body>
 </html>
