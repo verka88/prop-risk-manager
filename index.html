@@ -36,7 +36,7 @@
 <body>
 <div class="wrap">
 
-  <h2 style="margin:6px 0 14px;">Pro Challenge Risk Tool <span class="pill">Units + price</span></h2>
+  <h2 style="margin:6px 0 14px;">Pro Challenge Risk Tool <span class="pill">Zone → SL → Lots</span></h2>
 
   <div class="switch">
     <button id="quickModeBtn" type="button" class="modeBtn active">Quick</button>
@@ -65,6 +65,11 @@
     </div>
 
     <div class="muted" id="userStatus" style="margin-top:8px;">Not signed in</div>
+
+    <div style="margin-top:10px; display:none;" id="upgradeBox">
+      <button id="upgradeBtn" type="button">Upgrade to Pro</button>
+      <div class="tiny muted" id="upgradeHint">Trial expired. Upgrade to unlock Pro features.</div>
+    </div>
   </div>
 
   <!-- CALCULATOR -->
@@ -75,7 +80,7 @@
       <div>
         <label>Symbol</label>
 
-        <input id="symbolSearch" type="text" placeholder="Search symbol (e.g. BTC USD, eur/usd)..." style="margin-bottom:6px;" />
+        <input id="symbolSearch" type="text" placeholder="Search symbol..." style="margin-bottom:6px;" />
         <select id="symbol"></select>
 
         <div style="margin-top:8px;">
@@ -84,8 +89,7 @@
 
         <div id="addSymbolBox" style="display:none; margin-top:10px;">
           <input id="customSymbolName" placeholder="Symbol name (e.g. US500)" />
-          <input id="customAsset" placeholder="Asset (FX / Crypto / Index / Metals)" />
-          <input id="customUnitName" placeholder="Unit name (pips / ticks / points)" />
+          <input id="customUnitName" placeholder="Unit name (pips/ticks/points)" />
           <input id="customUnitSize" placeholder="Unit size (e.g. 0.0001 / 1)" />
           <input id="customValuePerUnit" placeholder="Value per unit @1 lot (EUR)" />
           <input id="customLotStep" placeholder="Lot step (e.g. 0.01)" />
@@ -103,7 +107,7 @@
       </div>
 
       <div>
-        <label>RR (used only if TP empty)</label>
+        <label>RR (if TP empty)</label>
         <input id="rr" type="text" inputmode="decimal" value="2">
         <div class="tiny muted">Comma decimals supported (e.g. 1,8)</div>
       </div>
@@ -124,62 +128,77 @@
       </div>
     </div>
 
+    <!-- ZONE → SL -->
     <div class="grid3">
       <div>
-        <label id="slUnitsLabel">SL (units)</label>
-        <input id="slUnits" type="text" inputmode="decimal" value="15">
-        <div class="muted">Zone SL distance in units</div>
+        <label id="zoneLabel">Zone size (units)</label>
+        <input id="zoneSize" type="text" inputmode="decimal" value="15">
+        <div class="tiny muted">Write your zone size. App converts it to SL distance.</div>
       </div>
 
       <div>
-        <label id="tpUnitsLabel">TP (units)</label>
-        <input id="tpUnits" type="text" inputmode="decimal" value="30">
-        <div class="muted">Leave empty to use RR</div>
+        <label id="slBufferLabel">SL buffer (units)</label>
+        <input id="slBufferUnits" type="text" inputmode="decimal" value="0">
+        <div class="tiny muted">Extra buffer added to SL distance.</div>
       </div>
 
       <div>
-        <label id="slBufferLabel">SL Buffer (units)</label>
-        <input id="slBuffer" type="text" inputmode="decimal" value="0">
-        <div class="muted">Adds extra SL beyond zone</div>
+        <label id="tpBufferLabel">TP buffer (units)</label>
+        <input id="tpBufferUnits" type="text" inputmode="decimal" value="0">
+        <div class="tiny muted">Optional buffer added to TP distance.</div>
       </div>
     </div>
 
     <div class="grid3">
       <div>
-        <label id="tpBufferLabel">TP Buffer (units)</label>
-        <input id="tpBuffer" type="text" inputmode="decimal" value="0">
-        <div class="muted">Adds extra TP distance</div>
+        <label id="slUnitsLabel">SL distance (units)</label>
+        <input id="slUnits" type="text" inputmode="decimal" value="15">
+        <div class="tiny muted">Auto = Zone + SL buffer (you can override if needed).</div>
       </div>
 
       <div>
-        <label>Unit size (price per unit)</label>
+        <label id="tpUnitsLabel">TP distance (units)</label>
+        <input id="tpUnits" type="text" inputmode="decimal" value="30">
+        <div class="tiny muted">Leave empty → uses RR.</div>
+      </div>
+
+      <div>
+        <label>TP mode</label>
+        <select id="tpMode">
+          <option value="UNITS">Use TP units</option>
+          <option value="RR">Use RR</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid3">
+      <div>
+        <label>Unit size (pip/tick)</label>
         <input id="unitSize" type="text" inputmode="decimal" value="0,0001">
         <div class="muted">Editable override</div>
       </div>
-
       <div>
         <label>Value per unit @ 1 lot (EUR)</label>
         <input id="valuePerUnit" type="text" inputmode="decimal" value="9,0">
         <div class="muted">Most important for accuracy</div>
       </div>
-    </div>
-
-    <div class="grid3">
       <div>
         <label>Lot step</label>
         <input id="lotStep" type="text" inputmode="decimal" value="0,01">
       </div>
+    </div>
 
+    <div class="grid3">
       <div style="display:flex; align-items:end;">
         <button id="calcBtn" type="button">Calculate</button>
       </div>
-
       <div style="display:flex; align-items:end;">
         <button id="canTakeBtn" type="button">Can I take this trade? (Pro)</button>
       </div>
+      <div style="display:flex; align-items:end;">
+        <div class="muted" id="clickStatus"></div>
+      </div>
     </div>
-
-    <div class="muted" id="clickStatus" style="margin-top:8px;"></div>
 
     <div class="divider"></div>
 
@@ -222,14 +241,8 @@
     <div class="row"><div>Loss per 1 lot (EUR)</div><div id="lossPerLotOut">-</div></div>
     <div class="row"><div>Position size (lots)</div><div id="lotsOut">-</div></div>
 
-    <div class="divider"></div>
-
     <div class="row"><div>SL distance (units)</div><div id="slUnitsOut">-</div></div>
     <div class="row"><div>TP distance (units)</div><div id="tpUnitsOut">-</div></div>
-    <div class="row"><div>RR Real</div><div id="rrOut">-</div></div>
-    <div class="row"><div>Potential Profit (EUR)</div><div id="profitOut">-</div></div>
-
-    <div class="divider"></div>
 
     <div class="row"><div>SL price</div><div id="slPriceOut">-</div></div>
     <div class="row"><div>TP price</div><div id="tpPriceOut">-</div></div>
@@ -284,18 +297,18 @@
       <div class="row"><div>Trade Status</div><div id="tradeStatusOut">-</div></div>
 
       <div class="muted" style="margin-top:10px;">
-        If trade risk is bigger than Remaining Daily/Overall → blocked.
+        If your trade risk is bigger than Remaining Daily/Overall → the engine blocks it.
       </div>
     </div>
 
     <div class="muted" style="margin-top:10px;">
-      Pro unlock = login. (Later you can connect payments and unlock only paid plans.)
+      Pro unlock = trial (7 days) → then upgrade.
     </div>
   </div>
 
 </div>
 
-<!-- IMPORTANT: keep as module -->
-<script type="module" src="app.js?v=1"></script>
+<!-- bump version to bust cache -->
+<script type="module" src="app.js?v=701"></script>
 </body>
 </html>
