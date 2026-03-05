@@ -30,17 +30,13 @@
   .ok { color:#22c55e; font-weight:800; }
   .bad { color:#ef4444; font-weight:800; }
   .warn { color:#f59e0b; font-weight:800; }
-
-  .authBar { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
-  .authActions { display:flex; gap:8px; flex-wrap:wrap; }
-  .authActions button { width:auto; padding:10px 12px; }
 </style>
 </head>
 
 <body>
 <div class="wrap">
 
-  <h2 style="margin:6px 0 14px;">Pro Challenge Risk Tool <span class="pill">Zone → SL → Lots</span></h2>
+  <h2 style="margin:6px 0 14px;">Pro Challenge Risk Tool <span class="pill">Trial + Pro</span></h2>
 
   <div class="switch">
     <button id="quickModeBtn" type="button" class="modeBtn active">Quick</button>
@@ -62,17 +58,23 @@
       </div>
     </div>
 
-    <div class="authBar" style="margin-top:10px;">
-      <div class="muted" id="userStatus">Not signed in</div>
-
-      <div class="authActions">
-        <button id="signUpBtn" type="button">Create account</button>
-        <button id="signInBtn" type="button">Sign in</button>
-        <button id="signOutBtn" type="button" style="display:none;">Sign out</button>
-      </div>
+    <!-- Signed OUT -->
+    <div id="authSignedOut" class="grid3" style="margin-top:10px;">
+      <button id="signUpBtn" type="button">Create account</button>
+      <button id="signInBtn" type="button">Sign in</button>
+      <button id="helpBtn" type="button">Help</button>
     </div>
 
-    <div class="tiny muted" id="trialStatus"></div>
+    <!-- Signed IN -->
+    <div id="authSignedIn" style="display:none; margin-top:10px;">
+      <div class="row" style="border-bottom:0; padding:0;">
+        <div class="muted" id="userStatus">Signed in</div>
+        <button id="signOutBtn" type="button" style="max-width:220px;">Sign out</button>
+      </div>
+
+      <div id="trialBanner" class="muted tiny" style="margin-top:8px;"></div>
+      <button id="upgradeBtn" type="button" style="margin-top:8px; display:none;">Upgrade</button>
+    </div>
   </div>
 
   <!-- CALCULATOR -->
@@ -93,10 +95,9 @@
         <div id="addSymbolBox" style="display:none; margin-top:10px;">
           <input id="customSymbolName" placeholder="Symbol name (e.g. US500)" />
           <input id="customUnitSize" placeholder="Unit size (e.g. 1)" />
-          <input id="customValuePerUnit" placeholder="Value per unit @1 lot (EUR)" />
+          <input id="customValuePerUnit" placeholder="Value per unit @1 lot" />
           <input id="customLotStep" placeholder="Lot step (e.g. 0.01)" />
           <button id="addSymbolBtn" type="button">Save Symbol</button>
-          <div class="tiny muted">Saved locally on this device.</div>
         </div>
       </div>
 
@@ -109,7 +110,7 @@
       </div>
 
       <div>
-        <label>RR</label>
+        <label>RR (if TP empty)</label>
         <input id="rr" type="text" inputmode="decimal" value="2">
         <div class="tiny muted">Comma decimals supported (e.g. 1,8)</div>
       </div>
@@ -130,85 +131,47 @@
       </div>
     </div>
 
-    <!-- ZONE → SL -->
     <div class="grid3">
       <div>
-        <label>Zone Top (price)</label>
-        <input id="zoneTop" type="text" inputmode="decimal" placeholder="e.g. 1,10500">
-        <div class="tiny muted">Upper line of your zone</div>
-      </div>
-
-      <div>
-        <label>Zone Bottom (price)</label>
-        <input id="zoneBottom" type="text" inputmode="decimal" placeholder="e.g. 1,10350">
-        <div class="tiny muted">Lower line of your zone</div>
-      </div>
-
-      <div>
-        <label id="zoneLabel">Zone size (units)</label>
-        <input id="zoneSize" type="text" inputmode="decimal" value="15">
-        <div class="tiny muted">Auto from Top/Bottom. You can override.</div>
-      </div>
-    </div>
-
-    <div class="grid3">
-      <div>
-        <label id="slBufferLabel">SL buffer (units)</label>
-        <input id="slBufferUnits" type="text" inputmode="decimal" value="0">
-        <div class="tiny muted">Added to SL distance</div>
-      </div>
-
-      <div>
-        <label id="tpBufferLabel">TP buffer (units)</label>
-        <input id="tpBufferUnits" type="text" inputmode="decimal" value="0">
-        <div class="tiny muted">Added to TP distance</div>
-      </div>
-
-      <div>
-        <label>TP mode</label>
-        <select id="tpMode">
-          <option value="UNITS">Use TP units</option>
-          <option value="RR">Use RR</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="grid3">
-      <div>
-        <label id="slUnitsLabel">SL distance (units)</label>
+        <label id="slUnitsLabel">SL (pips/ticks)</label>
         <input id="slUnits" type="text" inputmode="decimal" value="15">
-        <div class="tiny muted">Calculated = Zone size + SL buffer</div>
+        <div class="muted">Example: SL = 15 units</div>
       </div>
 
       <div>
-        <label id="tpUnitsLabel">TP distance (units)</label>
-        <input id="tpUnits" type="text" inputmode="decimal" value="30">
-        <div class="tiny muted">If TP mode = RR, this is auto</div>
+        <label id="tpUnitsLabel">TP (pips/ticks)</label>
+        <input id="tpUnits" type="text" inputmode="decimal" value="">
+        <div class="muted">Leave empty → uses RR</div>
       </div>
 
+      <div>
+        <label>TP buffer (pips/ticks)</label>
+        <input id="tpBuffer" type="text" inputmode="decimal" value="0">
+        <div class="muted">Optional (added to TP distance)</div>
+      </div>
+    </div>
+
+    <div class="grid3">
       <div>
         <label>Unit size (pip/tick)</label>
         <input id="unitSize" type="text" inputmode="decimal" value="0,0001">
-        <div class="tiny muted">Editable override</div>
+        <div class="muted">Editable override</div>
       </div>
-    </div>
-
-    <div class="grid3">
       <div>
         <label>Value per unit @ 1 lot (EUR)</label>
         <input id="valuePerUnit" type="text" inputmode="decimal" value="9,0">
+        <div class="muted">Most important for accuracy</div>
       </div>
       <div>
         <label>Lot step</label>
         <input id="lotStep" type="text" inputmode="decimal" value="0,01">
       </div>
-      <div style="display:flex; align-items:end;">
-        <button id="calcBtn" type="button">Calculate</button>
-      </div>
     </div>
 
     <div class="grid3">
-      <div></div>
+      <div style="display:flex; align-items:end;">
+        <button id="calcBtn" type="button">Calculate</button>
+      </div>
       <div style="display:flex; align-items:end;">
         <button id="canTakeBtn" type="button">Can I take this trade? (Pro)</button>
       </div>
@@ -258,7 +221,6 @@
     <div class="row"><div>Loss per 1 lot (EUR)</div><div id="lossPerLotOut">-</div></div>
     <div class="row"><div>Position size (lots)</div><div id="lotsOut">-</div></div>
 
-    <div class="row"><div>Zone size (units)</div><div id="zoneOut">-</div></div>
     <div class="row"><div>SL distance (units)</div><div id="slUnitsOut">-</div></div>
     <div class="row"><div>TP distance (units)</div><div id="tpUnitsOut">-</div></div>
 
@@ -301,7 +263,7 @@
 
       <div class="grid2">
         <div>
-          <label>Today PnL (EUR)</label>
+          <label>Today PnL (EUR) (e.g. -120 or +80)</label>
           <input id="todayPnl" type="text" inputmode="decimal" value="0">
         </div>
         <div>
@@ -314,21 +276,18 @@
       <div class="row"><div>Remaining Overall (EUR)</div><div id="remainingOverallOut">-</div></div>
       <div class="row"><div>Trade Status</div><div id="tradeStatusOut">-</div></div>
 
-      <div class="tiny muted" style="margin-top:10px;">
+      <div class="muted" style="margin-top:10px;">
         If your trade risk is bigger than Remaining Daily/Overall → the engine blocks it.
       </div>
     </div>
 
     <div class="muted" style="margin-top:10px;">
-      Pro unlock = login + active trial. (Later you can connect payments.)
+      Pro unlock = Trial or Paid (later Stripe).
     </div>
-
-    <div class="tiny muted" id="upgradeHint"></div>
   </div>
 
 </div>
 
-<!-- bump version to bust cache -->
-<script type="module" src="app.js?v=301"></script>
+<script type="module" src="app.js?v=300"></script>
 </body>
 </html>
