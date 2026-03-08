@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PropEngine - Prop Firm Risk Tool</title>
+<title>Pro Challenge Risk Tool</title>
 
 <style>
   body { background:#0b0b0c; color:#fff; font-family:Arial, system-ui; margin:0; }
@@ -36,7 +36,7 @@
 <body>
 <div class="wrap">
 
-  <h2 style="margin:6px 0 14px;">PropEngine Risk Tool<span class="pill">Trial + Pro</span></h2>
+  <h2 style="margin:6px 0 14px;">Pro Challenge Risk Tool <span class="pill">Trial + Pro</span></h2>
 
   <div class="switch">
     <button id="quickModeBtn" type="button" class="modeBtn active">Quick</button>
@@ -47,42 +47,16 @@
   <div class="card">
     <h3 style="margin:0 0 8px; font-size:14px;">Account</h3>
 
-  <div class="grid2">
-    <div>
-      <label>Email</label>
-      <input id="email" type="email" placeholder="you@email.com">
+    <div class="grid2">
+      <div>
+        <label>Email</label>
+        <input id="email" type="email" placeholder="you@email.com">
+      </div>
+      <div>
+        <label>Password</label>
+        <input id="password" type="password" placeholder="min. 6 chars">
+      </div>
     </div>
-
-    <div>
-      <label>Password</label>
-      <input id="password" type="password" placeholder="min. 6 chars">
-    </div>
-  </div>
-
-  <!-- Signed OUT -->
-  <div id="authSignedOut" style="margin-top:10px;">
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-      <button id="signUpBtn" type="button">Create account</button>
-      <button id="signInBtn" type="button">Sign in</button>
-    </div>
-
-    <button id="helpBtn" type="button" style="margin-top:10px; width:100%;">Help</button>
-  </div>
-
-  <!-- Signed IN -->
-  <div id="authSignedIn" style="display:none; margin-top:10px;">
-    <div class="row" style="border-bottom:0; padding:0;">
-      <div class="muted" id="userStatus">Signed in</div>
-      <button id="signOutBtn" type="button" style="max-width:220px;">Sign out</button>
-    </div>
-
-    <div id="trialBanner" class="muted tiny" style="margin-top:8px;"></div>
-
-    <button id="upgradeBtn" type="button" style="margin-top:8px; display:none;">
-      Upgrade
-    </button>
-  </div>
-</div>
 
     <!-- Signed OUT -->
     <div id="authSignedOut" class="grid3" style="margin-top:10px;">
