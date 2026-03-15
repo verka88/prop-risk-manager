@@ -1,21 +1,15 @@
-// =====================================
-// PropEngine - full app.js
-// matched to the latest provided index.html
-// =====================================
-
 const $ = (id) => document.getElementById(id);
 
 const STORAGE = {
-  APP: "propengine_app_state_v2",
-  AUTH: "propengine_auth_state_v2",
-  LOCK: "propengine_lock_state_v2",
-  SYMBOLS: "propengine_symbols_v2",
-  MODES: "propengine_modes_v2"
+  APP: "propengine_pairs_app_v1",
+  AUTH: "propengine_pairs_auth_v1",
+  LOCK: "propengine_pairs_lock_v1",
+  MODES: "propengine_pairs_modes_v1"
 };
 
-// ---------------------
-// helpers
-// ---------------------
+// =========================
+// HELPERS
+// =========================
 function parseNum(value, fallback = 0) {
   if (value === null || value === undefined) return fallback;
   const cleaned = String(value).replace(/\s/g, "").replace(",", ".").trim();
@@ -60,7 +54,7 @@ function fmt(n, digits = 2) {
 }
 
 function money(n) {
-  return `${Number(n).toFixed(2)}`;
+  return ${Number(n).toFixed(2)} €;
 }
 
 function floorToStep(value, step) {
@@ -68,34 +62,22 @@ function floorToStep(value, step) {
   return Math.floor(value / step) * step;
 }
 
-function isLong() {
-  return ($("direction")?.value || "LONG") === "LONG";
-}
-
 function setStatusClass(id, type) {
   const el = $(id);
   if (!el) return;
   el.classList.remove("ok", "warn", "bad");
-
   if (type === "ok") el.classList.add("ok");
   if (type === "warn") el.classList.add("warn");
   if (type === "bad") el.classList.add("bad");
 }
 
-// ---------------------
-// symbols
-// ---------------------
-const defaultSymbols = [
-  { name: "EURUSD (FX)", unitSize: 0.0001, valuePerUnit: 9.0, lotStep: 0.01, slLabel: "SL (pips)", tpLabel: "TP (pips)" },
-  { name: "GBPUSD (FX)", unitSize: 0.0001, valuePerUnit: 9.0, lotStep: 0.01, slLabel: "SL (pips)", tpLabel: "TP (pips)" },
-  { name: "XAUUSD (Gold)", unitSize: 0.1, valuePerUnit: 1.0, lotStep: 0.01, slLabel: "SL (points)", tpLabel: "TP (points)" },
-  { name: "NAS100 (Index)", unitSize: 1, valuePerUnit: 1.0, lotStep: 0.01, slLabel: "SL (points)", tpLabel: "TP (points)" },
-  { name: "US30 (Index)", unitSize: 1, valuePerUnit: 1.0, lotStep: 0.01, slLabel: "SL (points)", tpLabel: "TP (points)" },
-  { name: "GER40 (Index)", unitSize: 1, valuePerUnit: 1.0, lotStep: 0.01, slLabel: "SL (points)", tpLabel: "TP (points)" },
-  { name: "BTCUSD (Crypto)", unitSize: 1, valuePerUnit: 1.0, lotStep: 0.01, slLabel: "SL (points)", tpLabel: "TP (points)" }
-];
+function isLong() {
+  return ($("direction")?.value || "LONG") === "LONG";
+}
 
-let symbols = [];
+// =========================
+// ACCESS / AUTH
+// =========================
 let authState = {
   signedIn: false,
   email: "",
@@ -103,14 +85,32 @@ let authState = {
   pro: false
 };
 
-let lockState = {
-  currentStreak: 0,
-  lockedUntil: null
-};
+function isSignedIn() {
+  return !!authState.signedIn;
+}
 
-// ---------------------
-// auth
-// ---------------------
+function isTrialActive() {
+  return !!authState.trialEndsAt && Date.now() < authState.trialEndsAt;
+}
+
+function isProActive() {
+  return !!authState.pro;
+}
+
+function hasPremiumAccess() {
+  return isTrialActive() || isProActive();
+}
+
+function trialDaysLeft() {
+  if (!isTrialActive()) return 0;
+  return Math.ceil((authState.trialEndsAt - Date.now()) / (24 * 60 * 60 * 1000));
+}
+
+function startTrial() {
+  authState.trialEndsAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
+  saveAuth();
+}
+
 function loadAuth() {
   try {
     const raw = localStorage.getItem(STORAGE.AUTH);
@@ -125,38 +125,20 @@ function saveAuth() {
   localStorage.setItem(STORAGE.AUTH, JSON.stringify(authState));
 }
 
-function trialActive() {
-  return !!authState.trialEndsAt && Date.now() < authState.trialEndsAt;
-}
-
-function hasProAccess() {
-  return !!authState.pro || trialActive();
-}
-
-function startTrial() {
-  authState.trialEndsAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
-  saveAuth();
-}
-
-function trialDaysLeft() {
-  if (!trialActive()) return 0;
-  return Math.ceil((authState.trialEndsAt - Date.now()) / (24 * 60 * 60 * 1000));
-}
-
 function renderAuth() {
-  if (authState.signedIn) {
+  if (isSignedIn()) {
     show("authSignedOut", false);
     show("authSignedIn", true);
-    setText("userStatus", `Signed in: ${authState.email}`);
+    setText("userStatus", Signed in: ${authState.email});
 
-    if (authState.pro) {
+    if (isProActive()) {
       setText("trialBanner", "PropEngine Pro active.");
       show("upgradeBtn", false);
-    } else if (trialActive()) {
-      setText("trialBanner", `PropEngine Trial active — ${trialDaysLeft()} day(s) left.`);
+    } else if (isTrialActive()) {
+      setText("trialBanner", PropEngine Trial active — ${trialDaysLeft()} day(s) left.);
       show("upgradeBtn", true);
     } else {
-      setText("trialBanner", "Trial expired. Upgrade to unlock Pro features.");
+      setText("trialBanner", "Free plan active. Upgrade to unlock premium features.");
       show("upgradeBtn", true);
     }
   } else {
@@ -164,7 +146,7 @@ function renderAuth() {
     show("authSignedIn", false);
   }
 
-  updateProUi();
+  updateAccessUi();
 }
 
 function signUp() {
@@ -179,7 +161,7 @@ function signUp() {
   authState.signedIn = true;
   authState.email = email;
 
-  if (!authState.pro && !trialActive()) {
+  if (!isTrialActive() && !isProActive()) {
     startTrial();
   }
 
@@ -199,7 +181,7 @@ function signIn() {
   authState.signedIn = true;
   authState.email = email;
 
-  if (!authState.pro && !trialActive()) {
+  if (!isTrialActive() && !isProActive()) {
     startTrial();
   }
 
@@ -218,43 +200,80 @@ function upgradeToPro() {
   authState.pro = true;
   saveAuth();
   renderAuth();
-  alert("Pro unlocked locally.");
+  alert("Pro unlocked locally for now.");
 }
 
 function showHelp() {
   alert(
-    "PropEngine help:\n\n" +
-    "1. Select symbol.\n" +
-    "2. Enter balance, risk, entry and SL.\n" +
-    "3. Leave TP empty to use RR.\n" +
-    "4. In Zone mode, zone size + buffer creates SL and TP levels.\n" +
-    "5. Pro tools are unlocked by Trial or Pro."
+    "Free = Manual calculator.\n" +
+    "Trial / Pro = Zone mode, Split TP, Reality check, Challenge engine, Loss-streak lock, Custom symbols."
   );
 }
 
-// ---------------------
-// symbols logic
-// ---------------------
-function loadSymbols() {
-  try {
-    const raw = localStorage.getItem(STORAGE.SYMBOLS);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length) {
-        symbols = parsed;
-        return;
-      }
-    }
-  } catch (e) {
-    console.error("Symbols load error", e);
+function updateAccessUi() {
+  const premium = hasPremiumAccess();
+
+  if ($("planBadge")) {
+    $("planBadge").textContent =
+      isProActive() ? "Pro Active" :
+      isTrialActive() ? "Trial Active" :
+      "Free Plan";
   }
 
-  symbols = [...defaultSymbols];
+  if ($("zoneCalcModeBtn")) $("zoneCalcModeBtn").disabled = !premium;
+  if ($("canTakeBtn")) $("canTakeBtn").disabled = !premium;
+  if ($("showAddSymbol")) $("showAddSymbol").disabled = !premium;
+
+  if (!premium && $("zoneCalcModeBtn")?.classList.contains("active")) {
+    setCalcMode("manual");
+  }
+
+  if ($("premiumUpsell")) show("premiumUpsell", !premium);
+  if ($("realityCard")) show("realityCard", premium);
+  if ($("challengeCard")) show("challengeCard", premium);
+  if ($("lockCard")) show("lockCard", premium);
+
+  if (!premium) {
+    ["totalLotOut", "lot1Out", "lot2Out", "tp1PriceOut", "tp2PriceOut", "beAfterTp1Out", "decisionOut"].forEach((id) => {
+      if ($(id)) setText(id, "Pro");
+    });
+  }
 }
 
-function saveSymbols() {
-  localStorage.setItem(STORAGE.SYMBOLS, JSON.stringify(symbols));
-}
+// =========================
+// SYMBOLS - PAIR MODEL
+// valuePerUnit = EUR value of 1 pip/point/unit at 1 lot
+// =========================
+const defaultSymbols = [
+  // FX majors
+  { name: "EURUSD", type: "fx", unitSize: 0.0001, valuePerUnit: 9.0, lotStep: 0.01, entry: "1,10000", slLabel: "SL (pips)", tpLabel: "TP (pips)" },
+  { name: "GBPUSD", type: "fx", unitSize: 0.0001, valuePerUnit: 9.0, lotStep: 0.01, entry: "1,27000", slLabel: "SL (pips)", tpLabel: "TP (pips)" },
+  { name: "AUDUSD", type: "fx", unitSize: 0.0001, valuePerUnit: 9.0, lotStep: 0.01, entry: "0,66000", slLabel: "SL (pips)", tpLabel: "TP (pips)" },
+  { name: "NZDUSD", type: "fx", unitSize: 0.0001, valuePerUnit: 9.0, lotStep: 0.01, entry: "0,61000", slLabel: "SL (pips)", tpLabel: "TP (pips)" },
+  { name: "USDCAD", type: "fx", unitSize: 0.0001, valuePerUnit: 7.0, lotStep: 0.01, entry: "1,35000", slLabel: "SL (pips)", tpLabel: "TP (pips)" },
+  { name: "USDCHF", type: "fx", unitSize: 0.0001, valuePerUnit: 10.0, lotStep: 0.01, entry: "0,89000", slLabel: "SL (pips)", tpLabel: "TP (pips)" },
+
+  // JPY pairs
+  { name: "USDJPY", type: "jpy", unitSize: 0.01, valuePerUnit: 6.2, lotStep: 0.01, entry: "150,00", slLabel: "SL (pips)", tpLabel: "TP (pips)" },
+  { name: "EURJPY", type: "jpy", unitSize: 0.01, valuePerUnit: 6.2, lotStep: 0.01, entry: "182,33", slLabel: "SL (pips)", tpLabel: "TP (pips)" },
+  { name: "GBPJPY", type: "jpy", unitSize: 0.01, valuePerUnit: 6.2, lotStep: 0.01, entry: "191,00", slLabel: "SL (pips)", tpLabel: "TP (pips)" },
+
+  // Metals
+  { name: "XAUUSD", type: "metal", unitSize: 0.01, valuePerUnit: 1.0, lotStep: 0.01, entry: "2150,00", slLabel: "SL (points)", tpLabel: "TP (points)" },
+  { name: "XAGUSD", type: "metal", unitSize: 0.01, valuePerUnit: 5.0, lotStep: 0.01, entry: "24,50", slLabel: "SL (points)", tpLabel: "TP (points)" },
+
+  // Indices
+  { name: "NAS100", type: "index", unitSize: 1, valuePerUnit: 1.0, lotStep: 0.01, entry: "18000", slLabel: "SL (points)", tpLabel: "TP (points)" },
+  { name: "US30", type: "index", unitSize: 1, valuePerUnit: 1.0, lotStep: 0.01, entry: "39000", slLabel: "SL (points)", tpLabel: "TP (points)" },
+  { name: "GER40", type: "index", unitSize: 1, valuePerUnit: 1.0, lotStep: 0.01, entry: "17500", slLabel: "SL (points)", tpLabel: "TP (points)" },
+  { name: "SPX500", type: "index", unitSize: 1, valuePerUnit: 1.0, lotStep: 0.01, entry: "5100", slLabel: "SL (points)", tpLabel: "TP (points)" },
+
+  // Crypto
+  { name: "BTCUSD", type: "crypto", unitSize: 1, valuePerUnit: 1.0, lotStep: 0.01, entry: "70000", slLabel: "SL (points)", tpLabel: "TP (points)" },
+  { name: "ETHUSD", type: "crypto", unitSize: 1, valuePerUnit: 1.0, lotStep: 0.01, entry: "3500", slLabel: "SL (points)", tpLabel: "TP (points)" }
+];
+
+let symbols = [...defaultSymbols];
 
 function populateSymbols(filter = "") {
   const select = $("symbol");
@@ -285,7 +304,7 @@ function getSelectedSymbol() {
   return symbols.find((s) => s.name === name) || null;
 }
 
-function applySelectedSymbol() {
+function applySelectedSymbol(forceEntry = false) {
   const sym = getSelectedSymbol();
   if (!sym) return;
 
@@ -295,9 +314,18 @@ function applySelectedSymbol() {
 
   if ($("slUnitsLabel")) $("slUnitsLabel").textContent = sym.slLabel;
   if ($("tpUnitsLabel")) $("tpUnitsLabel").textContent = sym.tpLabel;
+
+  if (forceEntry || !$("entry")?.value?.trim()) {
+    setValue("entry", sym.entry || "");
+  }
 }
 
 function addCustomSymbol() {
+  if (!hasPremiumAccess()) {
+    alert("Custom symbols are available in Trial / Pro.");
+    return;
+  }
+
   const name = $("customSymbolName")?.value?.trim();
   const unitSize = parseNum($("customUnitSize")?.value, NaN);
   const valuePerUnit = parseNum($("customValuePerUnit")?.value, NaN);
@@ -310,18 +338,19 @@ function addCustomSymbol() {
 
   symbols.push({
     name,
+    type: "custom",
     unitSize,
     valuePerUnit,
     lotStep,
+    entry: "",
     slLabel: "SL (units)",
     tpLabel: "TP (units)"
   });
 
   symbols.sort((a, b) => a.name.localeCompare(b.name));
-  saveSymbols();
   populateSymbols($("symbolSearch")?.value || "");
   $("symbol").value = name;
-  applySelectedSymbol();
+  applySelectedSymbol(false);
   calculateAll();
 
   setValue("customSymbolName", "");
@@ -331,9 +360,9 @@ function addCustomSymbol() {
   show("addSymbolBox", false);
 }
 
-// ---------------------
-// modes
-// ---------------------
+// =========================
+// MODES
+// =========================
 function saveModes() {
   const payload = {
     main: $("disciplineModeBtn")?.classList.contains("active") ? "discipline" : "quick",
@@ -361,6 +390,10 @@ function loadModes() {
 
 function setMainMode(mode) {
   if (mode === "discipline") {
+    if (!hasPremiumAccess()) {
+      alert("Discipline mode is available in Trial / Pro.");
+      return;
+    }
     addClass("disciplineModeBtn", "active");
     removeClass("quickModeBtn", "active");
   } else {
@@ -372,6 +405,10 @@ function setMainMode(mode) {
 
 function setCalcMode(mode) {
   if (mode === "zone") {
+    if (!hasPremiumAccess()) {
+      alert("Zone mode is available in Trial / Pro.");
+      return;
+    }
     addClass("zoneCalcModeBtn", "active");
     removeClass("manualCalcModeBtn", "active");
     addClass("manualModeFields", "hidden");
@@ -387,15 +424,105 @@ function setCalcMode(mode) {
   saveModes();
 }
 
-// ---------------------
-// app state
-// ---------------------
+// =========================
+// LOCK
+// =========================
+let lockState = {
+  currentStreak: 0,
+  lockedUntil: null
+};
+
+function loadLockState() {
+  try {
+    const raw = localStorage.getItem(STORAGE.LOCK);
+    if (!raw) return;
+    lockState = { ...lockState, ...JSON.parse(raw) };
+  } catch (e) {
+    console.error("Lock load error", e);
+  }
+}
+
+function saveLockState() {
+  localStorage.setItem(STORAGE.LOCK, JSON.stringify(lockState));
+}
+
+function hasActiveLock() {
+  return !!lockState.lockedUntil && Date.now() < lockState.lockedUntil;
+}
+
+function updateLockStatus() {
+  if (!$("lockStatus") || !$("lockHint")) return;
+
+  if (!hasPremiumAccess()) {
+    setText("lockStatus", "Pro required");
+    setStatusClass("lockStatus", "warn");
+    setText("lockHint", "Unlock with Trial or Pro.");
+    return;
+  }
+
+  if (hasActiveLock()) {
+    const mins = Math.ceil((lockState.lockedUntil - Date.now()) / (1000 * 60));
+    setText("lockStatus", "Locked ❌");
+    setStatusClass("lockStatus", "bad");
+    setText("lockHint", Cooldown active: ${mins} min left.);
+    return;
+  }
+
+  setText("lockStatus", "Unlocked ✅");
+  setStatusClass("lockStatus", "ok");
+  setText("lockHint", "");
+}
+
+function recordWin() {
+  if (!hasPremiumAccess()) {
+    alert("Loss-streak lock is available in Trial / Pro.");
+    return;
+  }
+
+  lockState.currentStreak = 0;
+  lockState.lockedUntil = null;
+  setValue("streakNow", 0);
+  saveLockState();
+  updateLockStatus();
+}
+
+function recordLoss() {
+  if (!hasPremiumAccess()) {
+    alert("Loss-streak lock is available in Trial / Pro.");
+    return;
+  }
+
+  const maxStreak = inputNum("maxStreak", 3);
+  const cooldownMin = inputNum("cooldownMin", 120);
+  const next = inputNum("streakNow", 0) + 1;
+
+  setValue("streakNow", next);
+  lockState.currentStreak = next;
+
+  if (next >= maxStreak) {
+    lockState.lockedUntil = Date.now() + cooldownMin * 60 * 1000;
+  }
+
+  saveLockState();
+  updateLockStatus();
+}
+
+function resetLock() {
+  lockState.currentStreak = 0;
+  lockState.lockedUntil = null;
+  setValue("streakNow", 0);
+  saveLockState();
+  updateLockStatus();
+}
+
+// =========================
+// APP STATE
+// =========================
 function loadAppState() {
   try {
     const raw = localStorage.getItem(STORAGE.APP);
     if (!raw) return;
     const data = JSON.parse(raw);
-
     Object.entries(data).forEach(([id, value]) => {
       const el = $(id);
       if (el) el.value = value;
@@ -423,120 +550,35 @@ function saveAppState() {
   localStorage.setItem(STORAGE.APP, JSON.stringify(data));
 }
 
-// ---------------------
-// lock state
-// ---------------------
-function loadLockState() {
-  try {
-    const raw = localStorage.getItem(STORAGE.LOCK);
-    if (!raw) return;
-    lockState = { ...lockState, ...JSON.parse(raw) };
-  } catch (e) {
-    console.error("Lock load error", e);
-  }
-}
-
-function saveLockState() {
-  localStorage.setItem(STORAGE.LOCK, JSON.stringify(lockState));
-}
-
-function hasActiveLock() {
-  return !!lockState.lockedUntil && Date.now() < lockState.lockedUntil;
-}
-
-function updateLockStatus() {
-  const statusEl = $("lockStatus");
-  const hintEl = $("lockHint");
-  if (!statusEl || !hintEl) return;
-
-  if (!hasProAccess()) {
-    setText("lockStatus", "Pro required");
-    setStatusClass("lockStatus", "warn");
-    setText("lockHint", "Sign in + Trial/Pro required.");
-    return;
-  }
-
-  if (hasActiveLock()) {
-    const mins = Math.ceil((lockState.lockedUntil - Date.now()) / (1000 * 60));
-    setText("lockStatus", "Locked ❌");
-    setStatusClass("lockStatus", "bad");
-    setText("lockHint", `Cooldown active: ${mins} min left.`);
-    return;
-  }
-
-  setText("lockStatus", "Unlocked ✅");
-  setStatusClass("lockStatus", "ok");
-  setText("lockHint", "");
-}
-
-function updateProUi() {
-  updateLockStatus();
-}
-
-function recordWin() {
-  if (!hasProAccess()) {
-    alert("Pro required.");
-    return;
-  }
-
-  lockState.currentStreak = 0;
-  lockState.lockedUntil = null;
-  setValue("streakNow", 0);
-  saveLockState();
-  updateLockStatus();
-}
-
-function recordLoss() {
-  if (!hasProAccess()) {
-    alert("Pro required.");
-    return;
-  }
-
-  const maxStreak = inputNum("maxStreak", 3);
-  const cooldownMin = inputNum("cooldownMin", 120);
-  const next = inputNum("streakNow", 0) + 1;
-
-  setValue("streakNow", next);
-  lockState.currentStreak = next;
-
-  if (next >= maxStreak) {
-    lockState.lockedUntil = Date.now() + cooldownMin * 60 * 1000;
-  }
-
-  saveLockState();
-  updateLockStatus();
-}
-
-function resetLock() {
-  lockState.currentStreak = 0;
-  lockState.lockedUntil = null;
-  setValue("streakNow", 0);
-  saveLockState();
-  updateLockStatus();
-}
-
-// ---------------------
-// zone mode
-// ---------------------
+// =========================
+// CALC LOGIC
+// =========================
 function calculateZoneDerived() {
   const top = inputNum("zoneTop");
   const bottom = inputNum("zoneBottom");
   const buffer = inputNum("zoneBuffer", 2);
+  const unitSize = inputNum("unitSize", 0.0001);
 
-  const zoneSize = Math.abs(top - bottom);
-  const zoneSl = zoneSize + buffer;
-  const tp1 = zoneSl * 1;
-  const tp2 = zoneSl * 2;
+  if (!top || !bottom || !unitSize) {
+    setValue("zoneSize", "");
+    setValue("zoneSlUnits", "");
+    setValue("zoneTp1Units", "");
+    setValue("zoneTp2Units", "");
+    return;
+  }
 
-  setValue("zoneSize", zoneSize ? fmt(zoneSize, 2) : "");
-  setValue("zoneSlUnits", zoneSl ? fmt(zoneSl, 2) : "");
-  setValue("zoneTp1Units", tp1 ? fmt(tp1, 2) : "");
-  setValue("zoneTp2Units", tp2 ? fmt(tp2, 2) : "");
+  const rawDiff = Math.abs(top - bottom);
+  const zoneSizeUnits = rawDiff / unitSize;
+  const slUnits = zoneSizeUnits + buffer;
+  const tp1Units = slUnits;
+  const tp2Units = slUnits * 2;
+
+  setValue("zoneSize", fmt(zoneSizeUnits, 2));
+  setValue("zoneSlUnits", fmt(slUnits, 2));
+  setValue("zoneTp1Units", fmt(tp1Units, 2));
+  setValue("zoneTp2Units", fmt(tp2Units, 2));
 }
 
-// ---------------------
-// challenge engine
-// ---------------------
 function getChallengeState() {
   const accountSize = inputNum("accountSize", inputNum("balance", 10000));
   const dailyLossPct = inputNum("dailyLossPct", 5);
@@ -550,42 +592,29 @@ function getChallengeState() {
   const remainingDaily = dailyLimit + todayPnl;
   const remainingOverall = overallLimit + totalPnL;
 
-  return {
-    accountSize,
-    dailyLossPct,
-    maxLossPct,
-    todayPnl,
-    totalPnL,
-    dailyLimit,
-    overallLimit,
-    remainingDaily,
-    remainingOverall
-  };
+  return { remainingDaily, remainingOverall };
 }
 
 function renderChallenge() {
   const c = getChallengeState();
-  setText("remainingDailyOut", money(c.remainingDaily));
-  setText("remainingOverallOut", money(c.remainingOverall));
+  if ($("remainingDailyOut")) setText("remainingDailyOut", money(c.remainingDaily));
+  if ($("remainingOverallOut")) setText("remainingOverallOut", money(c.remainingOverall));
 }
 
-// ---------------------
-// trade calc
-// ---------------------
 function getTradeInputs() {
   const balance = inputNum("balance", 10000);
   const riskPct = inputNum("riskPct", 0.5);
   const entry = inputNum("entry", 0);
   const rr = inputNum("rr", 2);
-  const unitSize = inputNum("unitSize", 1);
-  const valuePerUnit = inputNum("valuePerUnit", 1);
+  const unitSize = inputNum("unitSize", 0.0001);
+  const valuePerUnit = inputNum("valuePerUnit", 9);
   const lotStep = inputNum("lotStep", 0.01);
   const tpBuffer = inputNum("tpBuffer", 0);
 
   let slUnits = 0;
   let tpUnits = 0;
 
-  const zoneMode = $("zoneCalcModeBtn")?.classList.contains("active");
+  const zoneMode = $("zoneCalcModeBtn")?.classList.contains("active") && hasPremiumAccess();
 
   if (zoneMode) {
     calculateZoneDerived();
@@ -604,14 +633,11 @@ function getTradeInputs() {
     balance,
     riskPct,
     entry,
-    rr,
     unitSize,
     valuePerUnit,
     lotStep,
-    tpBuffer,
     slUnits,
-    tpUnits,
-    zoneMode
+    tpUnits
   };
 }
 
@@ -633,24 +659,24 @@ function computeTrade() {
   if (lot1 < 0) lot1 = 0;
   if (lot2 < 0) lot2 = 0;
 
-  const directionLong = isLong();
+  const longTrade = isLong();
 
-  const slPrice = directionLong
+  const slPrice = longTrade
     ? x.entry - (x.slUnits * x.unitSize)
     : x.entry + (x.slUnits * x.unitSize);
 
-  const tpPrice = directionLong
+  const tpPrice = longTrade
     ? x.entry + (x.tpUnits * x.unitSize)
     : x.entry - (x.tpUnits * x.unitSize);
 
-  const tp1Units = x.slUnits * 1;
+  const tp1Units = x.slUnits;
   const tp2Units = x.slUnits * 2;
 
-  const tp1Price = directionLong
+  const tp1Price = longTrade
     ? x.entry + (tp1Units * x.unitSize)
     : x.entry - (tp1Units * x.unitSize);
 
-  const tp2Price = directionLong
+  const tp2Price = longTrade
     ? x.entry + (tp2Units * x.unitSize)
     : x.entry - (tp2Units * x.unitSize);
 
@@ -659,12 +685,13 @@ function computeTrade() {
   const balanceAfterSl = x.balance - riskEur;
 
   return {
-    ...x,
     riskEur,
     lossPerLot,
     totalLot,
     lot1,
     lot2,
+    slUnits: x.slUnits,
+    tpUnits: x.tpUnits,
     slPrice,
     tpPrice,
     tp1Price,
@@ -684,71 +711,66 @@ function renderTrade(result) {
   setText("slPriceOut", fmt(result.slPrice, 5));
   setText("tpPriceOut", fmt(result.tpPrice, 5));
 
-  setText("totalLotOut", fmt(result.totalLot, 3));
-  setText("lot1Out", fmt(result.lot1, 3));
-  setText("lot2Out", fmt(result.lot2, 3));
-  setText("tp1PriceOut", fmt(result.tp1Price, 5));
-  setText("tp2PriceOut", fmt(result.tp2Price, 5));
-  setText("beAfterTp1Out", "Yes");
+  if (hasPremiumAccess()) {
+    setText("totalLotOut", fmt(result.totalLot, 3));
+    setText("lot1Out", fmt(result.lot1, 3));
+    setText("lot2Out", fmt(result.lot2, 3));
+    setText("tp1PriceOut", fmt(result.tp1Price, 5));
+    setText("tp2PriceOut", fmt(result.tp2Price, 5));
+    setText("beAfterTp1Out", "Yes");
 
-  setText("balanceAfterSlOut", money(result.balanceAfterSl));
-  setText("profitTp1Out", money(result.profitTp1));
-  setText("profitTp2Out", money(result.profitTp2));
+    if ($("balanceAfterSlOut")) setText("balanceAfterSlOut", money(result.balanceAfterSl));
+    if ($("profitTp1Out")) setText("profitTp1Out", money(result.profitTp1));
+    if ($("profitTp2Out")) setText("profitTp2Out", money(result.profitTp2));
+  }
 }
 
-// ---------------------
-// decision + reality
-// ---------------------
 function evaluateTrade(result) {
-  const challenge = getChallengeState();
-
-  renderChallenge();
-
-  const dailyUsePct = challenge.remainingDaily > 0
-    ? (result.riskEur / challenge.remainingDaily) * 100
-    : 0;
-
-  setText("dailyUsePctOut", `${fmt(dailyUsePct, 2)}%`);
-
-  let challengeStatus = "OK ✅";
-  let challengeClass = "ok";
-
-  if (challenge.remainingDaily <= 0 || challenge.remainingOverall <= 0) {
-    challengeStatus = "Blocked ❌";
-    challengeClass = "bad";
-  } else if (result.riskEur > challenge.remainingDaily) {
-    challengeStatus = "Blocked ❌";
-    challengeClass = "bad";
-  } else if (result.riskEur > challenge.remainingOverall) {
-    challengeStatus = "Blocked ❌";
-    challengeClass = "bad";
-  } else if (dailyUsePct >= 60) {
-    challengeStatus = "Heavy risk ⚠️";
-    challengeClass = "warn";
+  if (!hasPremiumAccess()) {
+    setText("clickStatus", "Calculated ✅");
+    return;
   }
 
-  setText("tradeStatusOut", challengeStatus);
-  setStatusClass("tradeStatusOut", challengeClass);
+  const c = getChallengeState();
+  renderChallenge();
+
+  const dailyUsePct = c.remainingDaily > 0 ? (result.riskEur / c.remainingDaily) * 100 : 0;
+  if ($("dailyUsePctOut")) setText("dailyUsePctOut", ${fmt(dailyUsePct, 2)}%);
+
+  let tradeStatus = "OK ✅";
+  let tradeClass = "ok";
+
+  if (c.remainingDaily <= 0 || c.remainingOverall <= 0) {
+    tradeStatus = "Blocked ❌";
+    tradeClass = "bad";
+  } else if (result.riskEur > c.remainingDaily || result.riskEur > c.remainingOverall) {
+    tradeStatus = "Blocked ❌";
+    tradeClass = "bad";
+  } else if (dailyUsePct >= 60) {
+    tradeStatus = "Heavy risk ⚠️";
+    tradeClass = "warn";
+  }
+
+  if ($("tradeStatusOut")) {
+    setText("tradeStatusOut", tradeStatus);
+    setStatusClass("tradeStatusOut", tradeClass);
+  }
 
   let reality = "OK ✅";
   let realityClass = "ok";
 
-  if (challenge.remainingDaily <= 0 || challenge.remainingOverall <= 0) {
-    reality = "Challenge already breached ❌";
+  if (tradeClass === "bad") {
+    reality = "Risk too high ❌";
     realityClass = "bad";
-  } else if (result.riskEur > challenge.remainingDaily) {
-    reality = "Risk > remaining daily ❌";
-    realityClass = "bad";
-  } else if (result.riskEur > challenge.remainingOverall) {
-    reality = "Risk > remaining overall ❌";
-    realityClass = "bad";
-  } else if (dailyUsePct >= 60) {
-    reality = "Careful – this trade is heavy ⚠️";
+  } else if (tradeClass === "warn") {
+    reality = "Careful – heavy trade ⚠️";
     realityClass = "warn";
   }
 
-  setText("realityCheckOut", reality);
-  setStatusClass("realityCheckOut", realityClass);
+  if ($("realityCheckOut")) {
+    setText("realityCheckOut", reality);
+    setStatusClass("realityCheckOut", realityClass);
+  }
 
   let decision = "OK ✅";
   let decisionClass = "ok";
@@ -756,10 +778,10 @@ function evaluateTrade(result) {
   if (hasActiveLock()) {
     decision = "NO – loss lock active ❌";
     decisionClass = "bad";
-  } else if (challengeClass === "bad") {
+  } else if (tradeClass === "bad") {
     decision = "NO ❌";
     decisionClass = "bad";
-  } else if (challengeClass === "warn") {
+  } else if (tradeClass === "warn") {
     decision = "Careful ⚠️";
     decisionClass = "warn";
   }
@@ -772,8 +794,6 @@ function evaluateTrade(result) {
 
 function calculateAll() {
   calculateZoneDerived();
-  applySelectedSymbol();
-
   const result = computeTrade();
   renderTrade(result);
   evaluateTrade(result);
@@ -781,10 +801,15 @@ function calculateAll() {
   saveAppState();
 }
 
-// ---------------------
-// presets
-// ---------------------
+// =========================
+// PRESETS
+// =========================
 function applyChallengePreset(size) {
+  if (!hasPremiumAccess()) {
+    alert("Challenge engine is available in Trial / Pro.");
+    return;
+  }
+
   setValue("accountSize", size);
   setValue("balance", size);
   setValue("dailyLossPct", 5);
@@ -794,15 +819,28 @@ function applyChallengePreset(size) {
   calculateAll();
 }
 
-// ---------------------
-// events
-// ---------------------
+// =========================
+// EVENTS
+// =========================
 function bindEvents() {
   $("signUpBtn")?.addEventListener("click", signUp);
   $("signInBtn")?.addEventListener("click", signIn);
   $("signOutBtn")?.addEventListener("click", signOut);
   $("upgradeBtn")?.addEventListener("click", upgradeToPro);
+  $("upgradeBtnSecondary")?.addEventListener("click", upgradeToPro);
   $("helpBtn")?.addEventListener("click", showHelp);
+
+  $("startTrialBtn")?.addEventListener("click", () => {
+    if (!isSignedIn()) {
+      alert("Create account or sign in first.");
+      return;
+    }
+    if (!isTrialActive() && !isProActive()) {
+      startTrial();
+      renderAuth();
+      alert("7-day trial started.");
+    }
+  });
 
   $("quickModeBtn")?.addEventListener("click", () => setMainMode("quick"));
   $("disciplineModeBtn")?.addEventListener("click", () => setMainMode("discipline"));
@@ -811,6 +849,10 @@ function bindEvents() {
   $("zoneCalcModeBtn")?.addEventListener("click", () => setCalcMode("zone"));
 
   $("showAddSymbol")?.addEventListener("click", () => {
+    if (!hasPremiumAccess()) {
+      alert("Custom symbols are available in Trial / Pro.");
+      return;
+    }
     const box = $("addSymbolBox");
     if (!box) return;
     box.style.display = box.style.display === "none" || !box.style.display ? "block" : "none";
@@ -823,7 +865,7 @@ function bindEvents() {
   });
 
   $("symbol")?.addEventListener("change", () => {
-    applySelectedSymbol();
+    applySelectedSymbol(true);
     calculateAll();
   });
 
@@ -837,7 +879,13 @@ function bindEvents() {
   });
 
   $("calcBtn")?.addEventListener("click", calculateAll);
-  $("canTakeBtn")?.addEventListener("click", calculateAll);
+  $("canTakeBtn")?.addEventListener("click", () => {
+    if (!hasPremiumAccess()) {
+      alert("Decision engine is available in Trial / Pro.");
+      return;
+    }
+    calculateAll();
+  });
 
   $("presetChallenge10K")?.addEventListener("click", () => applyChallengePreset(10000));
   $("presetChallenge25K")?.addEventListener("click", () => applyChallengePreset(25000));
@@ -849,13 +897,12 @@ function bindEvents() {
   $("resetLockBtn")?.addEventListener("click", resetLock);
 }
 
-// ---------------------
-// init
-// ---------------------
+// =========================
+// INIT
+// =========================
 function init() {
-  loadSymbols();
-  loadAppState();
   loadAuth();
+  loadAppState();
   loadLockState();
 
   populateSymbols();
@@ -864,17 +911,16 @@ function init() {
     $("symbol").selectedIndex = 0;
   }
 
-  applySelectedSymbol();
+  applySelectedSymbol(false);
   loadModes();
+  bindEvents();
   renderAuth();
 
   if (lockState.currentStreak !== undefined) {
     setValue("streakNow", lockState.currentStreak);
   }
 
-  bindEvents();
   calculateAll();
-
   setInterval(updateLockStatus, 30000);
 }
 
