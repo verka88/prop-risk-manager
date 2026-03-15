@@ -1,55 +1,67 @@
-const $ = (id) => document.getElementById(id);
+const $ = function (id) {
+  return document.getElementById(id);
+};
 
 const STORAGE = {
-  APP: "propengine_pairs_app_v1",
-  AUTH: "propengine_pairs_auth_v1",
-  LOCK: "propengine_pairs_lock_v1",
-  MODES: "propengine_pairs_modes_v1"
+  AUTH: "propengine_auth_v2",
+  APP: "propengine_app_v2",
+  LOCK: "propengine_lock_v2",
+  MODES: "propengine_modes_v2",
+  CUSTOM_SYMBOLS: "propengine_custom_symbols_v2"
 };
 
 // =========================
 // HELPERS
 // =========================
-function parseNum(value, fallback = 0) {
+function parseNum(value, fallback) {
+  if (fallback === undefined) fallback = 0;
   if (value === null || value === undefined) return fallback;
-  const cleaned = String(value).replace(/\s/g, "").replace(",", ".").trim();
-  const n = parseFloat(cleaned);
+
+  var cleaned = String(value)
+    .replace(/\s/g, "")
+    .replace(",", ".")
+    .trim();
+
+  var n = parseFloat(cleaned);
   return Number.isFinite(n) ? n : fallback;
 }
 
-function inputNum(id, fallback = 0) {
-  const el = $(id);
+function inputNum(id, fallback) {
+  if (fallback === undefined) fallback = 0;
+  var el = $(id);
   if (!el) return fallback;
   return parseNum(el.value, fallback);
 }
 
 function setText(id, value) {
-  const el = $(id);
+  var el = $(id);
   if (el) el.textContent = value;
 }
 
 function setValue(id, value) {
-  const el = $(id);
+  var el = $(id);
   if (el) el.value = value;
 }
 
-function show(id, visible = true) {
-  const el = $(id);
+function show(id, visible) {
+  if (visible === undefined) visible = true;
+  var el = $(id);
   if (!el) return;
   el.style.display = visible ? "" : "none";
 }
 
 function addClass(id, cls) {
-  const el = $(id);
+  var el = $(id);
   if (el) el.classList.add(cls);
 }
 
 function removeClass(id, cls) {
-  const el = $(id);
+  var el = $(id);
   if (el) el.classList.remove(cls);
 }
 
-function fmt(n, digits = 2) {
+function fmt(n, digits) {
+  if (digits === undefined) digits = 2;
   return Number(n).toFixed(digits);
 }
 
@@ -57,14 +69,18 @@ function money(n) {
   return Number(n).toFixed(2) + " €";
 }
 
-
 function floorToStep(value, step) {
   if (!step || step <= 0) return value;
   return Math.floor(value / step) * step;
 }
 
+function isLong() {
+  var dir = $("direction");
+  return !dir || dir.value === "LONG";
+}
+
 function setStatusClass(id, type) {
-  const el = $(id);
+  var el = $(id);
   if (!el) return;
   el.classList.remove("ok", "warn", "bad");
   if (type === "ok") el.classList.add("ok");
@@ -72,19 +88,191 @@ function setStatusClass(id, type) {
   if (type === "bad") el.classList.add("bad");
 }
 
-function isLong() {
-  return ($("direction")?.value || "LONG") === "LONG";
+function setMirroredText(baseId, value) {
+  setText(baseId, value);
+  setText(baseId + "_dup", value);
 }
 
 // =========================
-// ACCESS / AUTH
+// SYMBOLS
+// valuePerUnit = value of 1 pip/point/unit at 1 lot in EUR
 // =========================
-let authState = {
+var defaultSymbols = [
+  // FX majors
+  { name: "EURUSD", unitSize: 0.0001, valuePerUnit: 10, lotStep: 0.01, entry: "1,10000", slLabel: "SL (pips)", tpLabel: "TP (pips)" },
+  { name: "GBPUSD", unitSize: 0.0001, valuePerUnit: 10, lotStep: 0.01, entry: "1,27000", slLabel: "SL (pips)", tpLabel: "TP (pips)" },
+  { name: "AUDUSD", unitSize: 0.0001, valuePerUnit: 10, lotStep: 0.01, entry: "0,66000", slLabel: "SL (pips)", tpLabel: "TP (pips)" },
+  { name: "NZDUSD", unitSize: 0.0001, valuePerUnit: 10, lotStep: 0.01, entry: "0,61000", slLabel: "SL (pips)", tpLabel: "TP (pips)" },
+  { name: "USDCAD", unitSize: 0.0001, valuePerUnit: 7.4, lotStep: 0.01, entry: "1,35000", slLabel: "SL (pips)", tpLabel: "TP (pips)" },
+  { name: "USDCHF", unitSize: 0.0001, valuePerUnit: 10.2, lotStep: 0.01, entry: "0,89000", slLabel: "SL (pips)", tpLabel: "TP (pips)" },
+
+  // JPY pairs
+  { name: "USDJPY", unitSize: 0.01, valuePerUnit: 6.2, lotStep: 0.01, entry: "150,00", slLabel: "SL (pips)", tpLabel: "TP (pips)" },
+  { name: "EURJPY", unitSize: 0.01, valuePerUnit: 6.2, lotStep: 0.01, entry: "182,33", slLabel: "SL (pips)", tpLabel: "TP (pips)" },
+  { name: "GBPJPY", unitSize: 0.01, valuePerUnit: 6.2, lotStep: 0.01, entry: "191,00", slLabel: "SL (pips)", tpLabel: "TP (pips)" },
+
+  // Metals
+  { name: "XAUUSD", unitSize: 0.01, valuePerUnit: 1, lotStep: 0.01, entry: "2150,00", slLabel: "SL (points)", tpLabel: "TP (points)" },
+  { name: "XAGUSD", unitSize: 0.01, valuePerUnit: 5, lotStep: 0.01, entry: "24,50", slLabel: "SL (points)", tpLabel: "TP (points)" },
+
+  // Indices
+  { name: "NAS100", unitSize: 1, valuePerUnit: 1, lotStep: 0.01, entry: "18000", slLabel: "SL (points)", tpLabel: "TP (points)" },
+  { name: "US30", unitSize: 1, valuePerUnit: 1, lotStep: 0.01, entry: "39000", slLabel: "SL (points)", tpLabel: "TP (points)" },
+  { name: "GER40", unitSize: 1, valuePerUnit: 1, lotStep: 0.01, entry: "17500", slLabel: "SL (points)", tpLabel: "TP (points)" },
+  { name: "SPX500", unitSize: 1, valuePerUnit: 1, lotStep: 0.01, entry: "5100", slLabel: "SL (points)", tpLabel: "TP (points)" },
+
+  // Crypto
+  { name: "BTCUSD", unitSize: 1, valuePerUnit: 1, lotStep: 0.01, entry: "70000", slLabel: "SL (points)", tpLabel: "TP (points)" },
+  { name: "ETHUSD", unitSize: 1, valuePerUnit: 1, lotStep: 0.01, entry: "3500", slLabel: "SL (points)", tpLabel: "TP (points)" }
+];
+
+var customSymbols = [];
+var symbols = [];
+
+function loadCustomSymbols() {
+  try {
+    var raw = localStorage.getItem(STORAGE.CUSTOM_SYMBOLS);
+    customSymbols = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(customSymbols)) customSymbols = [];
+  } catch (e) {
+    customSymbols = [];
+  }
+}
+
+function saveCustomSymbols() {
+  localStorage.setItem(STORAGE.CUSTOM_SYMBOLS, JSON.stringify(customSymbols));
+}
+
+function rebuildSymbols() {
+  symbols = defaultSymbols.concat(customSymbols);
+}
+
+function populateSymbols(filterText) {
+  if (filterText === undefined) filterText = "";
+  var select = $("symbol");
+  if (!select) return;
+
+  var q = String(filterText).toLowerCase().trim();
+  var filtered = symbols.filter(function (s) {
+    return s.name.toLowerCase().indexOf(q) !== -1;
+  });
+
+  select.innerHTML = "";
+
+  filtered.forEach(function (sym) {
+    var option = document.createElement("option");
+    option.value = sym.name;
+    option.textContent = sym.name;
+    select.appendChild(option);
+  });
+
+  if (!filtered.length) {
+    var empty = document.createElement("option");
+    empty.value = "";
+    empty.textContent = "No symbol found";
+    select.appendChild(empty);
+  }
+}
+
+function getSelectedSymbol() {
+  var name = $("symbol") ? $("symbol").value : "";
+  for (var i = 0; i < symbols.length; i++) {
+    if (symbols[i].name === name) return symbols[i];
+  }
+  return null;
+}
+
+function applySelectedSymbol(forceEntry) {
+  if (forceEntry === undefined) forceEntry = false;
+
+  var sym = getSelectedSymbol();
+  if (!sym) return;
+
+  setValue("unitSize", String(sym.unitSize).replace(".", ","));
+  setValue("valuePerUnit", String(sym.valuePerUnit).replace(".", ","));
+  setValue("lotStep", String(sym.lotStep).replace(".", ","));
+
+  if ($("slUnitsLabel")) $("slUnitsLabel").textContent = sym.slLabel;
+  if ($("tpUnitsLabel")) $("tpUnitsLabel").textContent = sym.tpLabel;
+
+  if (forceEntry || !($("entry") && $("entry").value && $("entry").value.trim())) {
+    setValue("entry", sym.entry);
+  }
+}
+
+function addCustomSymbol() { if (!hasPremiumAccess()) {
+    alert("Custom symbols are available in Trial / Pro.");
+    return;
+  }
+
+  var name = $("customSymbolName") ? $("customSymbolName").value.trim() : "";
+  var unitSize = parseNum($("customUnitSize") ? $("customUnitSize").value : "", NaN);
+  var valuePerUnit = parseNum($("customValuePerUnit") ? $("customValuePerUnit").value : "", NaN);
+  var lotStep = parseNum($("customLotStep") ? $("customLotStep").value : "", NaN);
+
+  if (!name || !Number.isFinite(unitSize) || !Number.isFinite(valuePerUnit) || !Number.isFinite(lotStep)) {
+    alert("Fill all custom symbol fields correctly.");
+    return;
+  }
+
+  customSymbols.push({
+    name: name,
+    unitSize: unitSize,
+    valuePerUnit: valuePerUnit,
+    lotStep: lotStep,
+    entry: "",
+    slLabel: "SL (units)",
+    tpLabel: "TP (units)"
+  });
+
+  customSymbols.sort(function (a, b) {
+    return a.name.localeCompare(b.name);
+  });
+
+  saveCustomSymbols();
+  rebuildSymbols();
+  populateSymbols($("symbolSearch") ? $("symbolSearch").value : "");
+  if ($("symbol")) $("symbol").value = name;
+  applySelectedSymbol(false);
+
+  setValue("customSymbolName", "");
+  setValue("customUnitSize", "");
+  setValue("customValuePerUnit", "");
+  setValue("customLotStep", "");
+  show("addSymbolBox", false);
+
+  calculateAll();
+}
+
+// =========================
+// AUTH / ACCESS
+// =========================
+var authState = {
   signedIn: false,
   email: "",
   trialEndsAt: null,
   pro: false
 };
+
+function loadAuth() {
+  try {
+    var raw = localStorage.getItem(STORAGE.AUTH);
+    if (!raw) return;
+    var parsed = JSON.parse(raw);
+    authState = {
+      signedIn: !!parsed.signedIn,
+      email: parsed.email || "",
+      trialEndsAt: parsed.trialEndsAt || null,
+      pro: !!parsed.pro
+    };
+  } catch (e) {
+    console.error("Auth load error", e);
+  }
+}
+
+function saveAuth() {
+  localStorage.setItem(STORAGE.AUTH, JSON.stringify(authState));
+}
 
 function isSignedIn() {
   return !!authState.signedIn;
@@ -112,26 +300,11 @@ function startTrial() {
   saveAuth();
 }
 
-function loadAuth() {
-  try {
-    const raw = localStorage.getItem(STORAGE.AUTH);
-    if (!raw) return;
-    authState = { ...authState, ...JSON.parse(raw) };
-  } catch (e) {
-    console.error("Auth load error", e);
-  }
-}
-
-function saveAuth() {
-  localStorage.setItem(STORAGE.AUTH, JSON.stringify(authState));
-}
-
 function renderAuth() {
   if (isSignedIn()) {
     show("authSignedOut", false);
     show("authSignedIn", true);
-     return Number(n).toFixed(2) + " €";
-}
+    setText("userStatus", "Signed in: " + authState.email);
 
     if (isProActive()) {
       setText("trialBanner", "PropEngine Pro active.");
@@ -152,8 +325,8 @@ function renderAuth() {
 }
 
 function signUp() {
-  const email = $("email")?.value?.trim() || "";
-  const password = $("password")?.value || "";
+  var email = $("email") ? $("email").value.trim() : "";
+  var password = $("password") ? $("password").value : "";
 
   if (!email || !password || password.length < 6) {
     alert("Enter valid email and password (min. 6 chars).");
@@ -172,8 +345,8 @@ function signUp() {
 }
 
 function signIn() {
-  const email = $("email")?.value?.trim() || "";
-  const password = $("password")?.value || "";
+  var email = $("email") ? $("email").value.trim() : "";
+  var password = $("password") ? $("password").value : "";
 
   if (!email || !password) {
     alert("Enter email and password.");
@@ -199,6 +372,9 @@ function signOut() {
 
 function upgradeToPro() {
   authState.signedIn = true;
+  if ($("email") && $("email").value.trim()) {
+    authState.email = $("email").value.trim();
+  }
   authState.pro = true;
   saveAuth();
   renderAuth();
@@ -206,27 +382,23 @@ function upgradeToPro() {
 }
 
 function showHelp() {
-  alert(
-    "Free = Manual calculator.\n" +
-    "Trial / Pro = Zone mode, Split TP, Reality check, Challenge engine, Loss-streak lock, Custom symbols."
-  );
+  alert("Free = Manual calculator. Trial / Pro = Zone mode, Split TP, Reality check, Challenge engine, Loss-streak lock, Custom symbols.");
 }
 
 function updateAccessUi() {
-  const premium = hasPremiumAccess();
+  var premium = hasPremiumAccess();
 
   if ($("planBadge")) {
-    $("planBadge").textContent =
-      isProActive() ? "Pro Active" :
-      isTrialActive() ? "Trial Active" :
-      "Free Plan";
+    if (isProActive()) $("planBadge").textContent = "Pro Active";
+    else if (isTrialActive()) $("planBadge").textContent = "Trial Active";
+    else $("planBadge").textContent = "Free Plan";
   }
 
   if ($("zoneCalcModeBtn")) $("zoneCalcModeBtn").disabled = !premium;
   if ($("canTakeBtn")) $("canTakeBtn").disabled = !premium;
   if ($("showAddSymbol")) $("showAddSymbol").disabled = !premium;
 
-  if (!premium && $("zoneCalcModeBtn")?.classList.contains("active")) {
+  if (!premium && $("zoneCalcModeBtn") && $("zoneCalcModeBtn").classList.contains("active")) {
     setCalcMode("manual");
   }
 
@@ -236,209 +408,32 @@ function updateAccessUi() {
   if ($("lockCard")) show("lockCard", premium);
 
   if (!premium) {
-    ["totalLotOut", "lot1Out", "lot2Out", "tp1PriceOut", "tp2PriceOut", "beAfterTp1Out", "decisionOut"].forEach((id) => {
-      if ($(id)) setText(id, "Pro");
-    });
+    setText("totalLotOut", "Pro");
+    setText("lot1Out", "Pro");
+    setText("lot2Out", "Pro");
+    setText("tp1PriceOut", "Pro");
+    setText("tp2PriceOut", "Pro");
+    setText("beAfterTp1Out", "Pro");
+    setText("decisionOut", "Pro");
+    setText("decisionOut_dup", "Pro");
   }
 }
 
 // =========================
-// SYMBOLS - PAIR MODEL
-// valuePerUnit = EUR value of 1 pip/point/unit at 1 lot
+// LOCK STATE
 // =========================
-const defaultSymbols = [
-  // FX majors
-  { name: "EURUSD", type: "fx", unitSize: 0.0001, valuePerUnit: 9.0, lotStep: 0.01, entry: "1,10000", slLabel: "SL (pips)", tpLabel: "TP (pips)" },
-  { name: "GBPUSD", type: "fx", unitSize: 0.0001, valuePerUnit: 9.0, lotStep: 0.01, entry: "1,27000", slLabel: "SL (pips)", tpLabel: "TP (pips)" },
-  { name: "AUDUSD", type: "fx", unitSize: 0.0001, valuePerUnit: 9.0, lotStep: 0.01, entry: "0,66000", slLabel: "SL (pips)", tpLabel: "TP (pips)" },
-  { name: "NZDUSD", type: "fx", unitSize: 0.0001, valuePerUnit: 9.0, lotStep: 0.01, entry: "0,61000", slLabel: "SL (pips)", tpLabel: "TP (pips)" },
-  { name: "USDCAD", type: "fx", unitSize: 0.0001, valuePerUnit: 7.0, lotStep: 0.01, entry: "1,35000", slLabel: "SL (pips)", tpLabel: "TP (pips)" },
-  { name: "USDCHF", type: "fx", unitSize: 0.0001, valuePerUnit: 10.0, lotStep: 0.01, entry: "0,89000", slLabel: "SL (pips)", tpLabel: "TP (pips)" },
-
-  // JPY pairs
-  { name: "USDJPY", type: "jpy", unitSize: 0.01, valuePerUnit: 6.2, lotStep: 0.01, entry: "150,00", slLabel: "SL (pips)", tpLabel: "TP (pips)" },
-  { name: "EURJPY", type: "jpy", unitSize: 0.01, valuePerUnit: 6.2, lotStep: 0.01, entry: "182,33", slLabel: "SL (pips)", tpLabel: "TP (pips)" },
-  { name: "GBPJPY", type: "jpy", unitSize: 0.01, valuePerUnit: 6.2, lotStep: 0.01, entry: "191,00", slLabel: "SL (pips)", tpLabel: "TP (pips)" },
-
-  // Metals
-  { name: "XAUUSD", type: "metal", unitSize: 0.01, valuePerUnit: 1.0, lotStep: 0.01, entry: "2150,00", slLabel: "SL (points)", tpLabel: "TP (points)" },
-  { name: "XAGUSD", type: "metal", unitSize: 0.01, valuePerUnit: 5.0, lotStep: 0.01, entry: "24,50", slLabel: "SL (points)", tpLabel: "TP (points)" },
-
-  // Indices
-  { name: "NAS100", type: "index", unitSize: 1, valuePerUnit: 1.0, lotStep: 0.01, entry: "18000", slLabel: "SL (points)", tpLabel: "TP (points)" },
-  { name: "US30", type: "index", unitSize: 1, valuePerUnit: 1.0, lotStep: 0.01, entry: "39000", slLabel: "SL (points)", tpLabel: "TP (points)" },
-  { name: "GER40", type: "index", unitSize: 1, valuePerUnit: 1.0, lotStep: 0.01, entry: "17500", slLabel: "SL (points)", tpLabel: "TP (points)" },
-  { name: "SPX500", type: "index", unitSize: 1, valuePerUnit: 1.0, lotStep: 0.01, entry: "5100", slLabel: "SL (points)", tpLabel: "TP (points)" },
-
-  // Crypto
-  { name: "BTCUSD", type: "crypto", unitSize: 1, valuePerUnit: 1.0, lotStep: 0.01, entry: "70000", slLabel: "SL (points)", tpLabel: "TP (points)" },
-  { name: "ETHUSD", type: "crypto", unitSize: 1, valuePerUnit: 1.0, lotStep: 0.01, entry: "3500", slLabel: "SL (points)", tpLabel: "TP (points)" }
-];
-
-let symbols = [...defaultSymbols];
-
-function populateSymbols(filter = "") {
-  const select = $("symbol");
-  if (!select) return;
-
-  const q = filter.toLowerCase().trim();
-  const filtered = symbols.filter((s) => s.name.toLowerCase().includes(q));
-
-  select.innerHTML = "";
-
-  filtered.forEach((sym) => {
-    const option = document.createElement("option");
-    option.value = sym.name;
-    option.textContent = sym.name;
-    select.appendChild(option);
-  });
-
-  if (!filtered.length) {
-    const option = document.createElement("option");
-    option.value = "";
-    option.textContent = "No symbol found";
-    select.appendChild(option);
-  }
-}
-
-function getSelectedSymbol() {
-  const name = $("symbol")?.value || "";
-  return symbols.find((s) => s.name === name) || null;
-}
-
-function applySelectedSymbol(forceEntry = false) {
-  const sym = getSelectedSymbol();
-  if (!sym) return;
-
-  setValue("unitSize", String(sym.unitSize).replace(".", ","));
-  setValue("valuePerUnit", String(sym.valuePerUnit).replace(".", ","));
-  setValue("lotStep", String(sym.lotStep).replace(".", ","));
-
-  if ($("slUnitsLabel")) $("slUnitsLabel").textContent = sym.slLabel;
-  if ($("tpUnitsLabel")) $("tpUnitsLabel").textContent = sym.tpLabel;
-
-  if (forceEntry || !$("entry")?.value?.trim()) {
-    setValue("entry", sym.entry || "");
-  }
-}
-
-function addCustomSymbol() {
-  if (!hasPremiumAccess()) {
-    alert("Custom symbols are available in Trial / Pro.");
-    return;
-  }
-
-  const name = $("customSymbolName")?.value?.trim();
-  const unitSize = parseNum($("customUnitSize")?.value, NaN);
-  const valuePerUnit = parseNum($("customValuePerUnit")?.value, NaN);
-  const lotStep = parseNum($("customLotStep")?.value, NaN);
-
-  if (!name || !Number.isFinite(unitSize) || !Number.isFinite(valuePerUnit) || !Number.isFinite(lotStep)) {
-    alert("Fill all custom symbol fields correctly.");
-    return;
-  }
-
-  symbols.push({
-    name,
-    type: "custom",
-    unitSize,
-    valuePerUnit,
-    lotStep,
-    entry: "",
-    slLabel: "SL (units)",
-    tpLabel: "TP (units)"
-  });
-
-  symbols.sort((a, b) => a.name.localeCompare(b.name));
-  populateSymbols($("symbolSearch")?.value || "");
-  $("symbol").value = name;
-  applySelectedSymbol(false);
-  calculateAll();
-
-  setValue("customSymbolName", "");
-  setValue("customUnitSize", "");
-  setValue("customValuePerUnit", "");
-  setValue("customLotStep", "");
-  show("addSymbolBox", false);
-}
-
-// =========================
-// MODES
-// =========================
-function saveModes() {
-  const payload = {
-    main: $("disciplineModeBtn")?.classList.contains("active") ? "discipline" : "quick",
-    calc: $("zoneCalcModeBtn")?.classList.contains("active") ? "zone" : "manual"
-  };
-  localStorage.setItem(STORAGE.MODES, JSON.stringify(payload));
-}
-
-function loadModes() {
-  try {
-    const raw = localStorage.getItem(STORAGE.MODES);
-    if (!raw) {
-      setMainMode("quick");
-      setCalcMode("manual");
-      return;
-    }
-    const parsed = JSON.parse(raw);
-    setMainMode(parsed.main || "quick");
-    setCalcMode(parsed.calc || "manual");
-  } catch {
-    setMainMode("quick");
-    setCalcMode("manual");
-  }
-}
-
-function setMainMode(mode) {
-  if (mode === "discipline") {
-    if (!hasPremiumAccess()) {
-      alert("Discipline mode is available in Trial / Pro.");
-      return;
-    }
-    addClass("disciplineModeBtn", "active");
-    removeClass("quickModeBtn", "active");
-  } else {
-    addClass("quickModeBtn", "active");
-    removeClass("disciplineModeBtn", "active");
-  }
-  saveModes();
-}
-
-function setCalcMode(mode) {
-  if (mode === "zone") {
-    if (!hasPremiumAccess()) {
-      alert("Zone mode is available in Trial / Pro.");
-      return;
-    }
-    addClass("zoneCalcModeBtn", "active");
-    removeClass("manualCalcModeBtn", "active");
-    addClass("manualModeFields", "hidden");
-    removeClass("zoneModeFields", "hidden");
-  } else {
-    addClass("manualCalcModeBtn", "active");
-    removeClass("zoneCalcModeBtn", "active");
-    removeClass("manualModeFields", "hidden");
-    addClass("zoneModeFields", "hidden");
-  }
-
-  calculateZoneDerived();
-  saveModes();
-}
-
-// =========================
-// LOCK
-// =========================
-let lockState = {
+var lockState = {
   currentStreak: 0,
   lockedUntil: null
 };
 
 function loadLockState() {
   try {
-    const raw = localStorage.getItem(STORAGE.LOCK);
+    var raw = localStorage.getItem(STORAGE.LOCK);
     if (!raw) return;
-    lockState = { ...lockState, ...JSON.parse(raw) };
+    var parsed = JSON.parse(raw);
+    lockState.currentStreak = parsed.currentStreak || 0;
+    lockState.lockedUntil = parsed.lockedUntil || null;
   } catch (e) {
     console.error("Lock load error", e);
   }
@@ -463,10 +458,10 @@ function updateLockStatus() {
   }
 
   if (hasActiveLock()) {
-    const mins = Math.ceil((lockState.lockedUntil - Date.now()) / (1000 * 60));
+    var mins = Math.ceil((lockState.lockedUntil - Date.now()) / (1000 * 60));
     setText("lockStatus", "Locked ❌");
     setStatusClass("lockStatus", "bad");
-    setText("lockHint", Cooldown active: ${mins} min left.);
+    setText("lockHint", "Cooldown active: " + mins + " min left.");
     return;
   }
 
@@ -494,12 +489,12 @@ function recordLoss() {
     return;
   }
 
-  const maxStreak = inputNum("maxStreak", 3);
-  const cooldownMin = inputNum("cooldownMin", 120);
-  const next = inputNum("streakNow", 0) + 1;
+  var maxStreak = inputNum("maxStreak", 3);
+  var cooldownMin = inputNum("cooldownMin", 120);
+  var next = inputNum("streakNow", 0) + 1;
 
-  setValue("streakNow", next);
   lockState.currentStreak = next;
+  setValue("streakNow", next);
 
   if (next >= maxStreak) {
     lockState.lockedUntil = Date.now() + cooldownMin * 60 * 1000;
@@ -518,16 +513,84 @@ function resetLock() {
 }
 
 // =========================
+// MODES
+// =========================
+function saveModes() {
+  var payload = {
+    main: $("disciplineModeBtn") && $("disciplineModeBtn").classList.contains("active") ? "discipline" : "quick",
+    calc: $("zoneCalcModeBtn") && $("zoneCalcModeBtn").classList.contains("active") ? "zone" : "manual"
+  };
+  localStorage.setItem(STORAGE.MODES, JSON.stringify(payload));
+}
+
+function loadModes() {
+  try {
+    var raw = localStorage.getItem(STORAGE.MODES);
+    if (!raw) {
+      setMainMode("quick");
+      setCalcMode("manual");
+      return;
+    }
+
+    var parsed = JSON.parse(raw);
+    setMainMode(parsed.main || "quick");
+    setCalcMode(parsed.calc || "manual");
+  } catch (e) {
+    setMainMode("quick");
+    setCalcMode("manual");
+  }
+}
+
+function setMainMode(mode) {
+  if (mode === "discipline") {
+    if (!hasPremiumAccess()) {
+      alert("Discipline mode is available in Trial / Pro.");
+      return;
+    }
+    addClass("disciplineModeBtn", "active");
+    removeClass("quickModeBtn", "active");
+  } else {
+    addClass("quickModeBtn", "active");
+    removeClass("disciplineModeBtn", "active");
+  }
+
+  saveModes();
+}
+
+function setCalcMode(mode) {
+  if (mode === "zone") {
+    if (!hasPremiumAccess()) {
+      alert("Zone mode is available in Trial / Pro.");
+      return;
+    }
+    addClass("zoneCalcModeBtn", "active");
+    removeClass("manualCalcModeBtn", "active");
+    addClass("manualModeFields", "hidden");
+    removeClass("zoneModeFields", "hidden");
+  } else {
+    addClass("manualCalcModeBtn", "active");
+    removeClass("zoneCalcModeBtn", "active");
+    removeClass("manualModeFields", "hidden");
+    addClass("zoneModeFields", "hidden");
+  }
+
+  calculateZoneDerived();
+  saveModes();
+}
+
+// =========================
 // APP STATE
 // =========================
 function loadAppState() {
   try {
-    const raw = localStorage.getItem(STORAGE.APP);
+    var raw = localStorage.getItem(STORAGE.APP);
     if (!raw) return;
-    const data = JSON.parse(raw);
-    Object.entries(data).forEach(([id, value]) => {
-      const el = $(id);
-      if (el) el.value = value;
+
+    var data = JSON.parse(raw);
+    Object.keys(data).forEach(function (id) {
+      if ($(id)) {
+        $(id).value = data[id];
+      }
     });
   } catch (e) {
     console.error("App state load error", e);
@@ -535,33 +598,56 @@ function loadAppState() {
 }
 
 function saveAppState() {
-  const ids = [
-    "email", "password", "symbolSearch", "direction", "rr", "balance", "riskPct", "entry",
-    "slUnits", "tpUnits", "tpBuffer", "zoneTop", "zoneBottom", "zoneSize", "zoneBuffer",
-    "zoneSlUnits", "zoneTp1Units", "zoneTp2Units", "unitSize", "valuePerUnit", "lotStep",
-    "maxStreak", "cooldownMin", "streakNow", "accountSize", "dailyLossPct", "maxLossPct",
-    "todayPnl", "totalPnL"
+  var ids = [
+    "email",
+    "password",
+    "symbolSearch",
+    "direction",
+    "rr",
+    "balance",
+    "riskPct",
+    "entry",
+    "slUnits",
+    "tpUnits",
+    "tpBuffer",
+    "zoneTop",
+    "zoneBottom",
+    "zoneSize",
+    "zoneBuffer",
+    "zoneSlUnits",
+    "zoneTp1Units",
+    "zoneTp2Units",
+    "unitSize",
+    "valuePerUnit",
+    "lotStep",
+    "maxStreak",
+    "cooldownMin",
+    "streakNow",
+    "accountSize",
+    "dailyLossPct",
+    "maxLossPct",
+    "todayPnl",
+    "totalPnL"
   ];
 
-  const data = {};
-  ids.forEach((id) => {
-    const el = $(id);
-    if (el) data[id] = el.value;
+  var data = {};
+  ids.forEach(function (id) {
+    if ($(id)) data[id] = $(id).value;
   });
 
   localStorage.setItem(STORAGE.APP, JSON.stringify(data));
 }
 
 // =========================
-// CALC LOGIC
+// CALCULATIONS
 // =========================
 function calculateZoneDerived() {
-  const top = inputNum("zoneTop");
-  const bottom = inputNum("zoneBottom");
-  const buffer = inputNum("zoneBuffer", 2);
-  const unitSize = inputNum("unitSize", 0.0001);
+  var top = inputNum("zoneTop", NaN);
+  var bottom = inputNum("zoneBottom", NaN);
+  var buffer = inputNum("zoneBuffer", 2);
+  var unitSize = inputNum("unitSize", 0.0001);
 
-  if (!top || !bottom || !unitSize) {
+  if (!Number.isFinite(top) || !Number.isFinite(bottom) || !unitSize) {
     setValue("zoneSize", "");
     setValue("zoneSlUnits", "");
     setValue("zoneTp1Units", "");
@@ -569,11 +655,11 @@ function calculateZoneDerived() {
     return;
   }
 
-  const rawDiff = Math.abs(top - bottom);
-  const zoneSizeUnits = rawDiff / unitSize;
-  const slUnits = zoneSizeUnits + buffer;
-  const tp1Units = slUnits;
-  const tp2Units = slUnits * 2;
+  var rawDiff = Math.abs(top - bottom);
+  var zoneSizeUnits = rawDiff / unitSize;
+  var slUnits = zoneSizeUnits + buffer;
+  var tp1Units = slUnits;
+  var tp2Units = slUnits * 2;
 
   setValue("zoneSize", fmt(zoneSizeUnits, 2));
   setValue("zoneSlUnits", fmt(slUnits, 2));
@@ -581,42 +667,20 @@ function calculateZoneDerived() {
   setValue("zoneTp2Units", fmt(tp2Units, 2));
 }
 
-function getChallengeState() {
-  const accountSize = inputNum("accountSize", inputNum("balance", 10000));
-  const dailyLossPct = inputNum("dailyLossPct", 5);
-  const maxLossPct = inputNum("maxLossPct", 10);
-  const todayPnl = inputNum("todayPnl", 0);
-  const totalPnL = inputNum("totalPnL", 0);
-
-  const dailyLimit = accountSize * (dailyLossPct / 100);
-  const overallLimit = accountSize * (maxLossPct / 100);
-
-  const remainingDaily = dailyLimit + todayPnl;
-  const remainingOverall = overallLimit + totalPnL;
-
-  return { remainingDaily, remainingOverall };
-}
-
-function renderChallenge() {
-  const c = getChallengeState();
-  if ($("remainingDailyOut")) setText("remainingDailyOut", money(c.remainingDaily));
-  if ($("remainingOverallOut")) setText("remainingOverallOut", money(c.remainingOverall));
-}
-
 function getTradeInputs() {
-  const balance = inputNum("balance", 10000);
-  const riskPct = inputNum("riskPct", 0.5);
-  const entry = inputNum("entry", 0);
-  const rr = inputNum("rr", 2);
-  const unitSize = inputNum("unitSize", 0.0001);
-  const valuePerUnit = inputNum("valuePerUnit", 9);
-  const lotStep = inputNum("lotStep", 0.01);
-  const tpBuffer = inputNum("tpBuffer", 0);
+  var balance = inputNum("balance", 10000);
+  var riskPct = inputNum("riskPct", 0.5);
+  var entry = inputNum("entry", 0);
+  var rr = inputNum("rr", 2);
+  var unitSize = inputNum("unitSize", 0.0001);
+  var valuePerUnit = inputNum("valuePerUnit", 10);
+  var lotStep = inputNum("lotStep", 0.01);
+  var tpBuffer = inputNum("tpBuffer", 0);
 
-  let slUnits = 0;
-  let tpUnits = 0;
+  var slUnits = 0;
+  var tpUnits = 0;
 
-  const zoneMode = $("zoneCalcModeBtn")?.classList.contains("active") && hasPremiumAccess();
+  var zoneMode = $("zoneCalcModeBtn") && $("zoneCalcModeBtn").classList.contains("active") && hasPremiumAccess();
 
   if (zoneMode) {
     calculateZoneDerived();
@@ -627,125 +691,151 @@ function getTradeInputs() {
     tpUnits = inputNum("tpUnits", 0);
 
     if (!tpUnits || tpUnits <= 0) {
-      tpUnits = (slUnits * rr) + tpBuffer;
+      tpUnits = slUnits * rr + tpBuffer;
     }
   }
 
   return {
-    balance,
-    riskPct,
-    entry,
-    unitSize,
-    valuePerUnit,
-    lotStep,
-    slUnits,
-    tpUnits
+    balance: balance,
+    riskPct: riskPct,
+    entry: entry,
+    unitSize: unitSize,
+    valuePerUnit: valuePerUnit,
+    lotStep: lotStep,
+    slUnits: slUnits,
+    tpUnits: tpUnits
   };
 }
 
 function computeTrade() {
-  const x = getTradeInputs();
+  var x = getTradeInputs();
 
-  const riskEur = x.balance * (x.riskPct / 100);
-  const lossPerLot = x.slUnits * x.valuePerUnit;
+  var riskEur = x.balance * (x.riskPct / 100);
+  var lossPerLot = x.slUnits * x.valuePerUnit;
 
-  let totalLot = 0;
+  var totalLot = 0;
   if (lossPerLot > 0) {
     totalLot = riskEur / lossPerLot;
   }
+
   totalLot = floorToStep(totalLot, x.lotStep);
 
-  let lot1 = floorToStep(totalLot * 0.5, x.lotStep);
-  let lot2 = floorToStep(totalLot - lot1, x.lotStep);
+  var lot1 = floorToStep(totalLot * 0.5, x.lotStep);
+  var lot2 = floorToStep(totalLot - lot1, x.lotStep);
 
   if (lot1 < 0) lot1 = 0;
   if (lot2 < 0) lot2 = 0;
 
-  const longTrade = isLong();
+  var longTrade = isLong();
 
-  const slPrice = longTrade
-    ? x.entry - (x.slUnits * x.unitSize)
-    : x.entry + (x.slUnits * x.unitSize);
+  var slPrice = longTrade
+    ? x.entry - x.slUnits * x.unitSize
+    : x.entry + x.slUnits * x.unitSize;
 
-  const tpPrice = longTrade
-    ? x.entry + (x.tpUnits * x.unitSize)
-    : x.entry - (x.tpUnits * x.unitSize);
+  var tpPrice = longTrade
+    ? x.entry + x.tpUnits * x.unitSize
+    : x.entry - x.tpUnits * x.unitSize;
 
-  const tp1Units = x.slUnits;
-  const tp2Units = x.slUnits * 2;
+  var tp1Units = x.slUnits;
+  var tp2Units = x.slUnits * 2;
 
-  const tp1Price = longTrade
-    ? x.entry + (tp1Units * x.unitSize)
-    : x.entry - (tp1Units * x.unitSize);
+  var tp1Price = longTrade
+    ? x.entry + tp1Units * x.unitSize
+    : x.entry - tp1Units * x.unitSize;
 
-  const tp2Price = longTrade
-    ? x.entry + (tp2Units * x.unitSize)
-    : x.entry - (tp2Units * x.unitSize);
+  var tp2Price = longTrade
+    ? x.entry + tp2Units * x.unitSize
+    : x.entry - tp2Units * x.unitSize;
 
-  const profitTp1 = lot1 * tp1Units * x.valuePerUnit;
-  const profitTp2 = lot2 * tp2Units * x.valuePerUnit;
-  const balanceAfterSl = x.balance - riskEur;
+  var profitTp1 = lot1 * tp1Units * x.valuePerUnit;
+  var profitTp2 = lot2 * tp2Units * x.valuePerUnit;
+  var balanceAfterSl = x.balance - riskEur;
 
   return {
-    riskEur,
-    lossPerLot,
-    totalLot,
-    lot1,
-    lot2,
+    riskEur: riskEur,
+    lossPerLot: lossPerLot,
+    totalLot: totalLot,
+    lot1: lot1,
+    lot2: lot2,
     slUnits: x.slUnits,
     tpUnits: x.tpUnits,
-    slPrice,
-    tpPrice,
-    tp1Price,
-    tp2Price,
-    profitTp1,
-    profitTp2,
-    balanceAfterSl
+    slPrice: slPrice,
+    tpPrice: tpPrice,
+    tp1Price: tp1Price,
+    tp2Price: tp2Price,
+    profitTp1: profitTp1,
+    profitTp2: profitTp2,
+    balanceAfterSl: balanceAfterSl
   };
 }
 
-function renderTrade(result) {
-  setText("riskOut", money(result.riskEur));
-  setText("lossPerLotOut", money(result.lossPerLot));
-  setText("lotsOut", fmt(result.totalLot, 3));
-  setText("slUnitsOut", fmt(result.slUnits, 2));
-  setText("tpUnitsOut", fmt(result.tpUnits, 2));
-  setText("slPriceOut", fmt(result.slPrice, 5));
-  setText("tpPriceOut", fmt(result.tpPrice, 5));
+function renderTrade(r) {
+  setMirroredText("riskOut", money(r.riskEur));
+  setText("lossPerLotOut", money(r.lossPerLot));
+  setMirroredText("lotsOut", fmt(r.totalLot, 3));
+  setText("slUnitsOut", fmt(r.slUnits, 2));
+  setText("tpUnitsOut", fmt(r.tpUnits, 2));
+  setText("slPriceOut", fmt(r.slPrice, 5));
+  setText("tpPriceOut", fmt(r.tpPrice, 5));
 
   if (hasPremiumAccess()) {
-    setText("totalLotOut", fmt(result.totalLot, 3));
-    setText("lot1Out", fmt(result.lot1, 3));
-    setText("lot2Out", fmt(result.lot2, 3));
-    setText("tp1PriceOut", fmt(result.tp1Price, 5));
-    setText("tp2PriceOut", fmt(result.tp2Price, 5));
+    setText("totalLotOut", fmt(r.totalLot, 3));
+    setText("lot1Out", fmt(r.lot1, 3));
+    setText("lot2Out", fmt(r.lot2, 3));
+    setText("tp1PriceOut", fmt(r.tp1Price, 5));
+    setText("tp2PriceOut", fmt(r.tp2Price, 5));
     setText("beAfterTp1Out", "Yes");
 
-    if ($("balanceAfterSlOut")) setText("balanceAfterSlOut", money(result.balanceAfterSl));
-    if ($("profitTp1Out")) setText("profitTp1Out", money(result.profitTp1));
-    if ($("profitTp2Out")) setText("profitTp2Out", money(result.profitTp2));
+    setText("balanceAfterSlOut", money(r.balanceAfterSl));
+    setText("profitTp1Out", money(r.profitTp1));
+    setText("profitTp2Out", money(r.profitTp2));
   }
 }
 
-function evaluateTrade(result) {
+function getChallengeState() {
+  var accountSize = inputNum("accountSize", inputNum("balance", 10000));
+  var dailyLossPct = inputNum("dailyLossPct", 5);
+  var maxLossPct = inputNum("maxLossPct", 10);
+  var todayPnl = inputNum("todayPnl", 0);
+  var totalPnL = inputNum("totalPnL", 0);
+
+  var dailyLimit = accountSize * (dailyLossPct / 100);
+  var overallLimit = accountSize * (maxLossPct / 100);
+
+  var remainingDaily = dailyLimit + todayPnl;
+  var remainingOverall = overallLimit + totalPnL;
+
+  return {
+    remainingDaily: remainingDaily,
+    remainingOverall: remainingOverall
+  };
+}
+
+function renderChallenge() {
+  var c = getChallengeState();
+  setMirroredText("remainingDailyOut", money(c.remainingDaily));
+  setText("remainingOverallOut", money(c.remainingOverall));
+}
+
+function evaluateTrade(r) {
   if (!hasPremiumAccess()) {
     setText("clickStatus", "Calculated ✅");
     return;
   }
 
-  const c = getChallengeState();
+  var c = getChallengeState();
   renderChallenge();
 
-  const dailyUsePct = c.remainingDaily > 0 ? (result.riskEur / c.remainingDaily) * 100 : 0;
-  if ($("dailyUsePctOut")) setText("dailyUsePctOut", ${fmt(dailyUsePct, 2)}%);
+  var dailyUsePct = c.remainingDaily > 0 ? (r.riskEur / c.remainingDaily) * 100 : 0;
+  setText("dailyUsePctOut", fmt(dailyUsePct, 2) + "%");
 
-  let tradeStatus = "OK ✅";
-  let tradeClass = "ok";
+  var tradeStatus = "OK ✅";
+  var tradeClass = "ok";
 
   if (c.remainingDaily <= 0 || c.remainingOverall <= 0) {
     tradeStatus = "Blocked ❌";
     tradeClass = "bad";
-  } else if (result.riskEur > c.remainingDaily || result.riskEur > c.remainingOverall) {
+  } else if (r.riskEur > c.remainingDaily || r.riskEur > c.remainingOverall) {
     tradeStatus = "Blocked ❌";
     tradeClass = "bad";
   } else if (dailyUsePct >= 60) {
@@ -753,13 +843,11 @@ function evaluateTrade(result) {
     tradeClass = "warn";
   }
 
-  if ($("tradeStatusOut")) {
-    setText("tradeStatusOut", tradeStatus);
-    setStatusClass("tradeStatusOut", tradeClass);
-  }
+  setText("tradeStatusOut", tradeStatus);
+  setStatusClass("tradeStatusOut", tradeClass);
 
-  let reality = "OK ✅";
-  let realityClass = "ok";
+  var reality = "OK ✅";
+  var realityClass = "ok";
 
   if (tradeClass === "bad") {
     reality = "Risk too high ❌";
@@ -769,13 +857,11 @@ function evaluateTrade(result) {
     realityClass = "warn";
   }
 
-  if ($("realityCheckOut")) {
-    setText("realityCheckOut", reality);
-    setStatusClass("realityCheckOut", realityClass);
-  }
+  setText("realityCheckOut", reality);
+  setStatusClass("realityCheckOut", realityClass);
 
-  let decision = "OK ✅";
-  let decisionClass = "ok";
+  var decision = "OK ✅";
+  var decisionClass = "ok";
 
   if (hasActiveLock()) {
     decision = "NO – loss lock active ❌";
@@ -789,14 +875,16 @@ function evaluateTrade(result) {
   }
 
   setText("decisionOut", decision);
+  setText("decisionOut_dup", decision);
   setStatusClass("decisionOut", decisionClass);
+  setStatusClass("decisionOut_dup", decisionClass);
 
   setText("clickStatus", "Calculated ✅");
 }
 
 function calculateAll() {
   calculateZoneDerived();
-  const result = computeTrade();
+  var result = computeTrade();
   renderTrade(result);
   evaluateTrade(result);
   updateLockStatus();
@@ -812,12 +900,13 @@ function applyChallengePreset(size) {
     return;
   }
 
-  setValue("accountSize", size);
-  setValue("balance", size);
-  setValue("dailyLossPct", 5);
-  setValue("maxLossPct", 10);
-  setValue("todayPnl", 0);
-  setValue("totalPnL", 0);
+  setValue("accountSize", String(size));
+  setValue("balance", String(size));
+  setValue("dailyLossPct", "5");
+  setValue("maxLossPct", "10");
+  setValue("todayPnl", "0");
+  setValue("totalPnL", "0");
+
   calculateAll();
 }
 
@@ -825,78 +914,119 @@ function applyChallengePreset(size) {
 // EVENTS
 // =========================
 function bindEvents() {
-  $("signUpBtn")?.addEventListener("click", signUp);
-  $("signInBtn")?.addEventListener("click", signIn);
-  $("signOutBtn")?.addEventListener("click", signOut);
-  $("upgradeBtn")?.addEventListener("click", upgradeToPro);
-  $("upgradeBtnSecondary")?.addEventListener("click", upgradeToPro);
-  $("helpBtn")?.addEventListener("click", showHelp);
+  if ($("signUpBtn")) $("signUpBtn").addEventListener("click", signUp);
+  if ($("signInBtn")) $("signInBtn").addEventListener("click", signIn);
+  if ($("signOutBtn")) $("signOutBtn").addEventListener("click", signOut);
+  if ($("upgradeBtn")) $("upgradeBtn").addEventListener("click", upgradeToPro);
+  if ($("upgradeBtnSecondary")) $("upgradeBtnSecondary").addEventListener("click", upgradeToPro);
+  if ($("upgradeBtnSecondary2")) $("upgradeBtnSecondary2").addEventListener("click", upgradeToPro);
+  if ($("helpBtn")) $("helpBtn").addEventListener("click", showHelp);
 
-  $("startTrialBtn")?.addEventListener("click", () => {
-    if (!isSignedIn()) {
-      alert("Create account or sign in first.");
-      return;
+  if ($("startTrialBtn")) {
+    $("startTrialBtn").addEventListener("click", function () {
+      if (!isSignedIn()) {
+        alert("Create account or sign in first.");
+        return;
+      }
+
+      if (!isTrialActive() && !isProActive()) {
+        startTrial();
+        renderAuth();
+        alert("7-day trial started.");
+      }
+    });
+  }
+
+  if ($("quickModeBtn")) $("quickModeBtn").addEventListener("click", function () { setMainMode("quick"); });
+  if ($("disciplineModeBtn")) $("disciplineModeBtn").addEventListener("click", function () { setMainMode("discipline"); });
+
+  if ($("manualCalcModeBtn")) $("manualCalcModeBtn").addEventListener("click", function () { setCalcMode("manual"); });
+  if ($("zoneCalcModeBtn")) $("zoneCalcModeBtn").addEventListener("click", function () { setCalcMode("zone"); });
+
+  if ($("showAddSymbol")) {
+    $("showAddSymbol").addEventListener("click", function () {
+      if (!hasPremiumAccess()) {
+        alert("Custom symbols are available in Trial / Pro.");
+        return;
+      }
+
+      var box = $("addSymbolBox");
+      if (!box) return;
+      box.style.display = box.style.display === "block" ? "none" : "block";
+    });
+  }
+
+  if ($("addSymbolBtn")) $("addSymbolBtn").addEventListener("click", addCustomSymbol);
+
+  if ($("symbolSearch")) {
+    $("symbolSearch").addEventListener("input", function (e) {
+      populateSymbols(e.target.value);
+
+      if ($("symbol") && $("symbol").options.length > 0) {
+        $("symbol").selectedIndex = 0;
+        applySelectedSymbol(false);
+      }
+    });
+  }
+
+  if ($("symbol")) {
+    $("symbol").addEventListener("change", function () {
+      applySelectedSymbol(true);
+      calculateAll();
+    });
+  }
+
+  var watchedInputs = [
+    "direction",
+    "rr",
+    "balance",
+    "riskPct",
+    "entry",
+    "slUnits",
+    "tpUnits",
+    "tpBuffer",
+    "zoneTop",
+    "zoneBottom",
+    "zoneBuffer",
+    "unitSize",
+    "valuePerUnit",
+    "lotStep",
+    "accountSize",
+    "dailyLossPct",
+    "maxLossPct",
+    "todayPnl",
+    "totalPnL",
+    "maxStreak",
+    "cooldownMin",
+    "streakNow"
+  ];
+
+  watchedInputs.forEach(function (id) {
+    if ($(id)) {
+      $(id).addEventListener("input", calculateAll);
     }
-    if (!isTrialActive() && !isProActive()) {
-      startTrial();
-      renderAuth();
-      alert("7-day trial started.");
-    }
   });
 
-  $("quickModeBtn")?.addEventListener("click", () => setMainMode("quick"));
-  $("disciplineModeBtn")?.addEventListener("click", () => setMainMode("discipline"));
+  if ($("calcBtn")) $("calcBtn").addEventListener("click", calculateAll);
 
-  $("manualCalcModeBtn")?.addEventListener("click", () => setCalcMode("manual"));
-  $("zoneCalcModeBtn")?.addEventListener("click", () => setCalcMode("zone"));
+  if ($("canTakeBtn")) {
+    $("canTakeBtn").addEventListener("click", function () {
+      if (!hasPremiumAccess()) {
+        alert("Decision engine is available in Trial / Pro.");
+        return;
+      }
+      calculateAll();
+    });
+  }
 
-  $("showAddSymbol")?.addEventListener("click", () => {
-    if (!hasPremiumAccess()) {
-      alert("Custom symbols are available in Trial / Pro.");
-      return;
-    }
-    const box = $("addSymbolBox");
-    if (!box) return;
-    box.style.display = box.style.display === "none" || !box.style.display ? "block" : "none";
-  });
+  if ($("presetChallenge10K")) $("presetChallenge10K").addEventListener("click", function () { applyChallengePreset(10000); });
+  if ($("presetChallenge25K")) $("presetChallenge25K").addEventListener("click", function () { applyChallengePreset(25000); });
+  if ($("presetChallenge50K")) $("presetChallenge50K").addEventListener("click", function () { applyChallengePreset(50000); });
+  if ($("presetChallenge100K")) $("presetChallenge100K").addEventListener("click", function () { applyChallengePreset(100000); });
 
-  $("addSymbolBtn")?.addEventListener("click", addCustomSymbol);
-
-  $("symbolSearch")?.addEventListener("input", (e) => {
-    populateSymbols(e.target.value);
-  });
-
-  $("symbol")?.addEventListener("change", () => {
-    applySelectedSymbol(true);
-    calculateAll();
-  });
-
-  [
-    "direction", "rr", "balance", "riskPct", "entry", "slUnits", "tpUnits", "tpBuffer",
-    "zoneTop", "zoneBottom", "zoneBuffer", "unitSize", "valuePerUnit", "lotStep",
-    "accountSize", "dailyLossPct", "maxLossPct", "todayPnl", "totalPnL",
-    "maxStreak", "cooldownMin", "streakNow"
-  ].forEach((id) => {
-    $(id)?.addEventListener("input", calculateAll);
-  });
-
-  $("calcBtn")?.addEventListener("click", calculateAll);
-  $("canTakeBtn")?.addEventListener("click", () => {
-    if (!hasPremiumAccess()) {
-      alert("Decision engine is available in Trial / Pro.");
-      return;
-    }
-    calculateAll();
-  });
-
-  $("presetChallenge10K")?.addEventListener("click", () => applyChallengePreset(10000));
-  $("presetChallenge25K")?.addEventListener("click", () => applyChallengePreset(25000));
-  $("presetChallenge50K")?.addEventListener("click", () => applyChallengePreset(50000));
-  $("presetChallenge100K")?.addEventListener("click", () => applyChallengePreset(100000));
-
-  $("winBtn")?.addEventListener("click", recordWin);
-  $("lossBtn")?.addEventListener("click", recordLoss);
-  $("resetLockBtn")?.addEventListener("click", resetLock);
+  if ($("winBtn")) $("winBtn").addEventListener("click", recordWin);
+  if ($("lossBtn")) $("lossBtn").addEventListener("click", recordLoss);
+  if ($("resetLockBtn")) $("resetLockBtn").addEventListener("click", resetLock);
 }
 
 // =========================
@@ -906,6 +1036,8 @@ function init() {
   loadAuth();
   loadAppState();
   loadLockState();
+  loadCustomSymbols();
+  rebuildSymbols();
 
   populateSymbols();
 
@@ -918,8 +1050,8 @@ function init() {
   bindEvents();
   renderAuth();
 
-  if (lockState.currentStreak !== undefined) {
-    setValue("streakNow", lockState.currentStreak);
+  if ($("streakNow")) {
+    setValue("streakNow", String(lockState.currentStreak || 0));
   }
 
   calculateAll();
