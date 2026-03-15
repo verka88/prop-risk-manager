@@ -130,13 +130,14 @@ function renderAuth() {
   if (isSignedIn()) {
     show("authSignedOut", false);
     show("authSignedIn", true);
-    setText("userStatus", Signed in: ${authState.email});
+     return Number(n).toFixed(2) + " €";
+}
 
     if (isProActive()) {
       setText("trialBanner", "PropEngine Pro active.");
       show("upgradeBtn", false);
     } else if (isTrialActive()) {
-      setText("trialBanner", PropEngine Trial active — ${trialDaysLeft()} day(s) left.);
+      setText("trialBanner", "PropEngine Trial active — " + trialDaysLeft() + " day(s) left.");
       show("upgradeBtn", true);
     } else {
       setText("trialBanner", "Free plan active. Upgrade to unlock premium features.");
