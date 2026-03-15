@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PropEngine – Prop Firm Risk Tool</title>
+  <title>PropEngine - Prop Firm Risk Tool</title>
   <style>
     :root {
       --bg: #0a0d14;
@@ -31,7 +31,7 @@
       color: var(--text);
       font-family: Inter, Arial, system-ui, sans-serif;
       background:
-        radial-gradient(circle at top left, rgba(79,124,255,.18), transparent 30%),
+        radial-gradient(circle at top left, rgba(79,124,255,.18), transparent 32%),
         radial-gradient(circle at top right, rgba(34,197,94,.08), transparent 22%),
         linear-gradient(180deg, #090c13 0%, #0b1018 100%);
     }
@@ -179,119 +179,28 @@
     }
 
     .card {
-      background: linear-gradient(180deg, rgba(17,22,34,.98) 0%, rgba(13,18,29,.98) 100%);
+      background: linear-gradient(180deg, rgba(17,22,34,.98) 0%, rgba(13,18,28,.98) 100%);
       border: 1px solid var(--soft-line);
       border-radius: var(--radius);
       padding: 18px;
       box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-
-    .card.proCard {
+      overflow: visible;
       position: relative;
-    }
-
-    .card.proCard::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border-radius: var(--radius);
-      pointer-events: none;
-      border: 1px solid rgba(79,124,255,.22);
-    }
-
-    .cardHeader {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 12px;
+      z-index: 1;
     }
 
     .sectionTitle {
-      margin: 0;
+      margin: 0 0 6px;
       font-size: 15px;
       font-weight: 800;
-      letter-spacing: -0.01em;
+      letter-spacing: -0.02em;
     }
 
     .sectionSub {
       color: var(--muted);
       font-size: 12px;
-      margin-top: 4px;
-    }
-
-    .premiumTag {
-      display: inline-flex;
-      padding: 5px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(79,124,255,.45);
-      background: rgba(79,124,255,.12);
-      color: #d6e2ff;
-      font-size: 11px;
-      font-weight: 700;
-    }
-
-    label {
-      display: block;
-      margin: 10px 0 6px;
-      font-size: 12px;
-      color: #cad5f4;
-    }
-
-    input, select {
-      width: 100%;
-      padding: 12px 12px;
-      border-radius: 14px;
-      border: 1px solid #283248;
-      background: #0d1320;
-      color: var(--text);
-      outline: none;
-      font-size: 14px;
-    }
-
-    input:focus, select:focus {
-      border-color: rgba(79,124,255,.6);
-      box-shadow: 0 0 0 3px rgba(79,124,255,.12);
-    }
-
-    button {
-      width: 100%;
-      padding: 13px 14px;
-      border-radius: 16px;
-      border: 1px solid #31405f;
-      background: linear-gradient(180deg, #202a40 0%, #182133 100%);
-      color: var(--text);
-      font-weight: 800;
-      cursor: pointer;
-      transition: .18s ease;
-    }
-
-    button:hover {
-      transform: translateY(-1px);
-      border-color: #4d6291;
-    }
-
-    button.primary {
-      background: linear-gradient(180deg, var(--blue) 0%, #345de7 100%);
-      border-color: #5e84ff;
-      color: white;
-    }
-
-    button.primary:hover {
-      background: linear-gradient(180deg, #5a85ff 0%, #3a67f5 100%);
-    }
-
-    button.ghost {
-      background: rgba(255,255,255,.03);
-      border-color: #2b3550;
-    }
-
-    button:disabled {
-      opacity: .45;
-      cursor: not-allowed;
-      transform: none;
+      margin-bottom: 14px;
+      line-height: 1.45;
     }
 
     .grid2, .grid3, .grid4 {
@@ -299,32 +208,90 @@
       gap: 12px;
     }
 
-    .grid2 { grid-template-columns: repeat(2, 1fr); }
-    .grid3 { grid-template-columns: repeat(3, 1fr); }
-    .grid4 { grid-template-columns: repeat(4, 1fr); }
+    .grid2 { grid-template-columns: 1fr 1fr; }
+    .grid3 { grid-template-columns: 1fr 1fr 1fr; }
+    .grid4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
 
-    .muted {
-      color: var(--muted);
+    label {
+      display: block;
+      margin: 0 0 7px;
       font-size: 12px;
-      line-height: 1.45;
+      color: #dbe4ff;
+      font-weight: 600;
+    }
+
+    input, select, button {
+      font: inherit;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 13px 14px;
+      border-radius: 16px;
+      border: 1px solid #2c3958;
+      background: linear-gradient(180deg, #121928 0%, #0f1521 100%);
+      color: var(--text);
+      outline: none;
+      transition: .16s ease;
+      pointer-events: auto;
+      position: relative;
+      z-index: 2;
+    }
+
+    input:focus, select:focus {
+      border-color: rgba(79,124,255,.75);
+      box-shadow: 0 0 0 3px rgba(79,124,255,.12);
+    }
+
+    button {
+      width: 100%;
+      padding: 13px 14px;
+      border-radius: 16px;
+      border: 1px solid #35508a;
+      background: linear-gradient(180deg, #50d7ff 0%, #71b7ff 100%);
+      color: #09111d;
+      font-weight: 800;
+      cursor: pointer;
+      transition: .18s ease;
+      pointer-events: auto;
+      position: relative;
+      z-index: 2;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.03);
+    }
+
+    button.secondary {
+      background: linear-gradient(180deg, #1b2332 0%, #121926 100%);
+      color: var(--text);
+      border-color: #2f3b59;
+    }
+
+    button:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+      transform: none;
     }
 
     .tiny {
+      margin-top: 6px;
       color: var(--muted);
       font-size: 11px;
-      margin-top: 6px;
+      line-height: 1.45;
     }
 
     .divider {
       height: 1px;
       background: var(--soft-line);
-      margin: 14px 0;
+      margin: 16px 0;
     }
 
     .row {
       display: flex;
       justify-content: space-between;
-      gap: 12px;
+      gap: 10px;
       padding: 11px 0;
       border-bottom: 1px solid var(--soft-line);
       align-items: center;
@@ -334,41 +301,12 @@
       border-bottom: 0;
     }
 
-    .rowLabel {
-      color: #d8e2fb;
-      font-size: 13px;
-    }
-
-    .rowValue {
-      font-weight: 800;
-      text-align: right;
-    }
-
-    .resultsGrid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 0;
-    }
-
-    .btnRow {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-    }
-
-    .authButtons {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
+    .muted {
+      color: var(--muted);
     }
 
     .ok {
       color: var(--green);
-      font-weight: 800;
-    }
-
-    .bad {
-      color: var(--red);
       font-weight: 800;
     }
 
@@ -377,49 +315,66 @@
       font-weight: 800;
     }
 
+    .bad {
+      color: var(--red);
+      font-weight: 800;
+    }
+
     .hidden {
       display: none !important;
     }
 
-    .upsellBox {
-      border: 1px solid rgba(79,124,255,.28);
-      background: linear-gradient(180deg, rgba(79,124,255,.09) 0%, rgba(79,124,255,.04) 100%);
+    .btnRow {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
     }
 
-    .footerNote {
-      margin-top: 18px;
-      text-align: center;
+    .rightSticky {
+      position: sticky;
+      top: 16px;
+    }
+
+    .premiumBox {
+      border: 1px dashed rgba(79,124,255,.45);
+      border-radius: 16px;
+      padding: 14px;
+      background: rgba(79,124,255,.08);
+    }
+
+    .premiumBox h4 {
+      margin: 0 0 8px;
+      font-size: 14px;
+    }
+
+    .premiumBox p {
+      margin: 0 0 12px;
       color: var(--muted);
       font-size: 12px;
+      line-height: 1.5;
     }
 
-    @media (max-width: 1040px) {
+    @media (max-width: 1020px) {
       .dashboard {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: 1fr 1fr;
       }
 
       .layout {
         grid-template-columns: 1fr;
       }
+
+      .rightSticky {
+        position: static;
+      }
     }
 
     @media (max-width: 760px) {
-      .grid2, .grid3, .grid4,
-      .btnRow, .authButtons,
-      .modeSwitch {
-        grid-template-columns: 1fr;
-      }
-
-      .dashboard {
+      .grid2, .grid3, .grid4, .btnRow, .modeSwitch, .dashboard {
         grid-template-columns: 1fr;
       }
 
       .brandTitle {
         font-size: 28px;
-      }
-
-      .statValue {
-        font-size: 24px;
       }
     }
   </style>
@@ -430,37 +385,37 @@
     <div class="topbar">
       <div>
         <h1 class="brandTitle">PropEngine</h1>
-        <div class="brandSub">Prop Firm Risk, Discipline & Decision Dashboard</div>
+        <div class="brandSub">Prop Firm Risk, Discipline &amp; Decision Dashboard</div>
       </div>
 
       <div class="topbarRight">
         <span id="planBadge" class="pill free">Free Plan</span>
-        <button id="upgradeBtnSecondary" type="button" class="primary" style="width:auto; padding:11px 16px;">Upgrade</button>
+        <button id="upgradeBtnSecondary" style="width:auto; min-width:140px;">Upgrade</button>
       </div>
     </div>
 
     <div class="dashboard">
       <div class="statCard">
         <div class="statLabel">Risk</div>
-        <div class="statValue" id="riskOut">-</div>
+        <div id="riskOut" class="statValue">-</div>
         <div class="statHint">Current trade risk in EUR</div>
       </div>
 
       <div class="statCard">
         <div class="statLabel">Position Size</div>
-        <div class="statValue" id="lotsOut">-</div>
+        <div id="lotsOut" class="statValue">-</div>
         <div class="statHint">Calculated lot size</div>
       </div>
 
       <div class="statCard">
         <div class="statLabel">Daily Room</div>
-        <div class="statValue" id="remainingDailyOut">-</div>
+        <div id="remainingDailyOut" class="statValue">-</div>
         <div class="statHint">Premium challenge metric</div>
       </div>
 
       <div class="statCard">
         <div class="statLabel">Decision</div>
-        <div class="statValue" id="decisionOut">-</div>
+        <div id="decisionOut" class="statValue">-</div>
         <div class="statHint">Premium trade approval</div>
       </div>
     </div>
@@ -474,75 +429,51 @@
       <div class="stack">
 
         <div class="card">
-          <div class="cardHeader">
-            <div>
-              <h3 class="sectionTitle">Account</h3>
-              <div class="sectionSub">Create account to activate Trial and unlock premium tools</div>
-            </div>
-          </div>
+          <h3 class="sectionTitle">Account</h3>
+          <div class="sectionSub">Create account to activate Trial and unlock premium tools</div>
 
-          <div class="grid2">
-            <div>
-              <label>Email</label>
-              <input id="email" type="email" placeholder="you@email.com">
-            </div>
-            <div>
-              <label>Password</label>
-              <input id="password" type="password" placeholder="min. 6 chars">
-            </div>
-          </div>
-
-          <div id="authSignedOut" style="margin-top:12px;">
-            <div class="authButtons">
-              <button id="signUpBtn" type="button" class="primary">Create account</button>
-              <button id="signInBtn" type="button">Sign in</button>
-            </div>
-            <button id="helpBtn" type="button" class="ghost" style="margin-top:10px;">Help</button>
-          </div>
-
-          <div id="authSignedIn" style="display:none; margin-top:12px;">
-            <div class="row" style="padding-top:0;">
-              <div class="rowLabel">
-                <div id="userStatus">Signed in</div>
-                <div id="trialBanner" class="tiny"></div>
+          <div id="authSignedOut">
+            <div class="grid2">
+              <div>
+                <label>Email</label>
+                <input id="email" type="email" placeholder="you@email.com">
               </div>
-              <div style="min-width:180px;">
-                <button id="signOutBtn" type="button" class="ghost">Sign out</button>
+              <div>
+                <label>Password</label>
+                <input id="password" type="password" placeholder="min. 6 chars">
               </div>
             </div>
-            <button id="upgradeBtn" type="button" class="primary" style="margin-top:8px; display:none;">Upgrade to Pro</button>
-          </div>
-        </div>
 
-        <div class="card upsellBox" id="premiumUpsell" style="display:none;">
-          <div class="cardHeader">
-            <div>
-              <h3 class="sectionTitle">Unlock PropEngine Pro</h3>
-              <div class="sectionSub">Advanced tools for serious traders</div>
+            <div class="grid2" style="margin-top:12px;">
+              <button id="signUpBtn" type="button">Create account</button>
+              <button id="signInBtn" type="button" class="secondary">Sign in</button>
             </div>
-            <span class="premiumTag">TRIAL / PRO</span>
+
+            <div style="margin-top:12px;">
+              <button id="helpBtn" type="button" class="secondary">Help</button>
+            </div>
           </div>
 
-          <div class="muted">
-            Unlock Zone mode, Split TP, Pre-trade reality check, Challenge engine, Loss-streak lock,
-            Custom symbols and Discipline mode.
-          </div>
+          <div id="authSignedIn" class="hidden">
+            <div class="row">
+              <div id="userStatus">Signed in</div>
+              <button id="signOutBtn" type="button" class="secondary" style="max-width:180px;">Sign out</button>
+            </div>
 
-          <div class="grid2" style="margin-top:14px;">
-            <button id="startTrialBtn" type="button" class="primary">Start 7-Day Trial</button>
-            <button id="upgradeBtnSecondary2" type="button">Upgrade to Pro</button>
+            <div id="trialBanner" class="tiny" style="margin-top:10px;"></div>
+
+            <div class="grid2" style="margin-top:12px;">
+              <button id="startTrialBtn" type="button" class="secondary">Start Trial</button>
+              <button id="upgradeBtn" type="button">Upgrade</button>
+            </div>
           </div>
         </div>
 
         <div class="card">
-          <div class="cardHeader">
-            <div>
-              <h3 class="sectionTitle">Quick Calculator</h3>
-              <div class="sectionSub">Manual mode is free. Zone mode is premium.</div>
-            </div>
-          </div>
+          <h3 class="sectionTitle">Quick Calculator</h3>
+          <div class="sectionSub">Manual mode is free. Zone mode is premium.</div>
 
-          <div class="modeSwitch" style="margin-bottom:16px;">
+          <div class="modeSwitch">
             <button id="manualCalcModeBtn" type="button" class="modeBtn active">Manual mode</button>
             <button id="zoneCalcModeBtn" type="button" class="modeBtn">Zone mode</button>
           </div>
@@ -550,23 +481,19 @@
           <div class="grid3">
             <div>
               <label>Symbol</label>
-              <input id="symbolSearch" type="text" placeholder="Search symbol..." style="margin-bottom:8px;">
+              <input id="symbolSearch" type="text" placeholder="Search symbol..." style="margin-bottom:10px;">
               <select id="symbol"></select>
 
-              <div style="margin-top:8px;">
-                <button id="showAddSymbol" type="button" class="ghost">+ Add Custom Symbol</button>
+              <div style="margin-top:10px;">
+                <button id="showAddSymbol" type="button" class="secondary">+ Add Custom Symbol</button>
               </div>
 
-              <div id="addSymbolBox" style="display:none; margin-top:10px;">
-                <input id="customSymbolName" placeholder="Symbol name (e.g. US500)">
-                <div style="height:8px;"></div>
-                <input id="customUnitSize" placeholder="Unit size (e.g. 1)">
-                <div style="height:8px;"></div>
-                <input id="customValuePerUnit" placeholder="Value per unit @1 lot">
-                <div style="height:8px;"></div>
-                <input id="customLotStep" placeholder="Lot step (e.g. 0.01)">
-                <div style="height:8px;"></div>
-                <button id="addSymbolBtn" type="button" class="primary">Save Symbol</button>
+              <div id="addSymbolBox" class="hidden" style="margin-top:10px;">
+                <input id="customSymbolName" placeholder="Symbol name" style="margin-bottom:8px;">
+                <input id="customUnitSize" placeholder="Unit size" style="margin-bottom:8px;">
+                <input id="customValuePerUnit" placeholder="Value per unit @1 lot" style="margin-bottom:8px;">
+                <input id="customLotStep" placeholder="Lot step" style="margin-bottom:8px;">
+                <button id="addSymbolBtn" type="button">Save Symbol</button>
               </div>
             </div>
 
@@ -581,35 +508,37 @@
             <div>
               <label>RR (if TP empty)</label>
               <input id="rr" type="text" inputmode="decimal" value="2">
-              <div class="tiny">Comma decimals supported (e.g. 1,8)</div>
+              <div class="tiny">Comma decimals supported</div>
             </div>
           </div>
 
-          <div class="grid3">
+          <div class="grid3" style="margin-top:12px;">
             <div>
               <label>Balance (EUR)</label>
               <input id="balance" type="text" inputmode="decimal" value="10000">
             </div>
+
             <div>
               <label>Risk %</label>
               <input id="riskPct" type="text" inputmode="decimal" value="0,5">
             </div>
+
             <div>
               <label>Entry price</label>
               <input id="entry" type="text" inputmode="decimal" value="1,10000">
             </div>
           </div>
 
-          <div id="manualModeFields">
+          <div id="manualModeFields" style="margin-top:12px;">
             <div class="grid3">
               <div>
-                <label id="slUnitsLabel">SL (pips/ticks)</label>
+                <label id="slUnitsLabel">SL (pips)</label>
                 <input id="slUnits" type="text" inputmode="decimal" value="15">
-                <div class="tiny">Example: SL = 15 units</div>
+                <div class="tiny">Example: 15 units</div>
               </div>
 
               <div>
-                <label id="tpUnitsLabel">TP (pips/ticks)</label>
+                <label id="tpUnitsLabel">TP (pips)</label>
                 <input id="tpUnits" type="text" inputmode="decimal" value="">
                 <div class="tiny">Leave empty → uses RR</div>
               </div>
@@ -617,54 +546,48 @@
               <div>
                 <label>TP buffer (pips/ticks)</label>
                 <input id="tpBuffer" type="text" inputmode="decimal" value="0">
-                <div class="tiny">Optional (added to TP distance)</div>
+                <div class="tiny">Optional</div>
               </div>
             </div>
           </div>
 
-          <div id="zoneModeFields" class="hidden">
+          <div id="zoneModeFields" class="hidden" style="margin-top:12px;">
             <div class="grid4">
               <div>
                 <label>Zone top</label>
-                <input id="zoneTop" type="text" inputmode="decimal" value="">
+                <input id="zoneTop" type="text" inputmode="decimal">
               </div>
-
               <div>
                 <label>Zone bottom</label>
-                <input id="zoneBottom" type="text" inputmode="decimal" value="">
+                <input id="zoneBottom" type="text" inputmode="decimal">
               </div>
-
               <div>
                 <label>Zone size (units)</label>
-                <input id="zoneSize" type="text" inputmode="decimal" value="" readonly>
+                <input id="zoneSize" type="text" readonly>
               </div>
-
               <div>
                 <label>Buffer (units)</label>
                 <input id="zoneBuffer" type="text" inputmode="decimal" value="2">
               </div>
             </div>
 
-            <div class="grid3">
+            <div class="grid3" style="margin-top:12px;">
               <div>
                 <label>Computed SL (units)</label>
-                <input id="zoneSlUnits" type="text" inputmode="decimal" value="" readonly>
-                <div class="tiny">Zone size + buffer</div>
+                <input id="zoneSlUnits" type="text" readonly>
               </div>
-
               <div>
                 <label>TP1 (1R)</label>
-                <input id="zoneTp1Units" type="text" inputmode="decimal" value="" readonly>
+                <input id="zoneTp1Units" type="text" readonly>
               </div>
-
               <div>
                 <label>TP2 (2R)</label>
-                <input id="zoneTp2Units" type="text" inputmode="decimal" value="" readonly>
+                <input id="zoneTp2Units" type="text" readonly>
               </div>
             </div>
           </div>
 
-          <div class="grid3">
+          <div class="grid3" style="margin-top:12px;">
             <div>
               <label>Unit size (pip/tick)</label>
               <input id="unitSize" type="text" inputmode="decimal" value="0,0001">
@@ -673,7 +596,7 @@
 
             <div>
               <label>Value per unit @ 1 lot (EUR)</label>
-              <input id="valuePerUnit" type="text" inputmode="decimal" value="9,0">
+              <input id="valuePerUnit" type="text" inputmode="decimal" value="10">
               <div class="tiny">Most important for accuracy</div>
             </div>
 
@@ -683,211 +606,139 @@
             </div>
           </div>
 
+          <div class="grid2" style="margin-top:14px;">
+            <button id="calcBtn" type="button">Calculate</button>
+            <button id="canTakeBtn" type="button" class="secondary">Can I take this trade? (Pro)</button>
+          </div>
+
+          <div id="clickStatus" class="tiny" style="margin-top:10px;"></div>
+        </div>
+
+        <div id="lockCard" class="card">
+          <h3 class="sectionTitle">Loss-streak lock</h3>
+          <div class="sectionSub">Cooldown after consecutive losses</div>
+
           <div class="grid3">
-            <div style="display:flex; align-items:end;">
-              <button id="calcBtn" type="button" class="primary">Calculate</button>
+            <div>
+              <label>Max loss streak</label>
+              <input id="maxStreak" type="text" inputmode="numeric" value="3">
             </div>
-            <div style="display:flex; align-items:end;">
-              <button id="canTakeBtn" type="button">Can I take this trade? (Pro)</button>
+            <div>
+              <label>Cooldown (minutes)</label>
+              <input id="cooldownMin" type="text" inputmode="numeric" value="120">
             </div>
-            <div style="display:flex; align-items:end;">
-              <div class="muted" id="clickStatus"></div>
+            <div>
+              <label>Current streak</label>
+              <input id="streakNow" type="text" inputmode="numeric" value="0">
             </div>
           </div>
+
+          <div class="grid3" style="margin-top:12px;">
+            <button id="winBtn" type="button">Win ✅ (reset)</button>
+            <button id="lossBtn" type="button" class="secondary">Loss ❌ (+1)</button>
+            <button id="resetLockBtn" type="button" class="secondary">Reset lock</button>
+          </div>
+
+          <div style="margin-top:12px;">
+            Status: <span id="lockStatus" class="warn">Pro required</span>
+            <div id="lockHint" class="tiny"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 class="sectionTitle">Results</h3>
+
+          <div class="row"><div>Risk (EUR)</div><div id="riskOut_dup">-</div></div>
+          <div class="row"><div>Loss per 1 lot (EUR)</div><div id="lossPerLotOut">-</div></div>
+          <div class="row"><div>Position size (lots)</div><div id="lotsOut_dup">-</div></div>
+          <div class="row"><div>SL distance (units)</div><div id="slUnitsOut">-</div></div>
+          <div class="row"><div>TP distance (units)</div><div id="tpUnitsOut">-</div></div>
+          <div class="row"><div>SL price</div><div id="slPriceOut">-</div></div>
+          <div class="row"><div>TP price</div><div id="tpPriceOut">-</div></div>
 
           <div class="divider"></div>
 
-          <div class="card proCard" id="lockCard" style="margin:0; padding:16px;">
-            <div class="cardHeader">
-              <div>
-                <h3 class="sectionTitle">Loss-streak lock</h3>
-                <div class="sectionSub">Cooldown after consecutive losses</div>
-              </div>
-              <span class="premiumTag">PRO</span>
-            </div>
+          <div class="row"><div>Total lot</div><div id="totalLotOut">-</div></div>
+          <div class="row"><div>Lot 1 (TP1)</div><div id="lot1Out">-</div></div>
+          <div class="row"><div>Lot 2 (TP2)</div><div id="lot2Out">-</div></div>
+          <div class="row"><div>TP1 price</div><div id="tp1PriceOut">-</div></div>
+          <div class="row"><div>TP2 price</div><div id="tp2PriceOut">-</div></div>
+          <div class="row"><div>Break-even after TP1</div><div id="beAfterTp1Out">-</div></div>
 
-            <div class="grid3">
-              <div>
-                <label>Max loss streak</label>
-                <input id="maxStreak" type="text" inputmode="numeric" value="3">
-              </div>
+          <div class="divider"></div>
 
-              <div>
-                <label>Cooldown (minutes)</label>
-                <input id="cooldownMin" type="text" inputmode="numeric" value="120">
-              </div>
-
-              <div>
-                <label>Current streak</label>
-                <input id="streakNow" type="text" inputmode="numeric" value="0">
-              </div>
-            </div>
-
-            <div class="grid3" style="margin-top:10px;">
-              <button id="winBtn" type="button">Win ✅ (reset)</button>
-              <button id="lossBtn" type="button">Loss ❌ (+1)</button>
-              <button id="resetLockBtn" type="button" class="ghost">Reset lock</button>
-            </div>
-
-            <div class="muted" style="margin-top:10px;">
-              Status: <span id="lockStatus" class="warn">Pro required</span>
-              <div id="lockHint" class="tiny"></div>
-            </div>
-          </div>
+          <div class="row"><div>Decision</div><div id="decisionOut_dup">-</div></div>
         </div>
       </div>
 
-      <div class="stack">
+      <div class="stack rightSticky">
 
-        <div class="card" id="resultsCard">
-          <div class="cardHeader">
-            <div>
-              <h3 class="sectionTitle">Results</h3>
-              <div class="sectionSub">Core outputs from your trade setup</div>
-            </div>
-          </div>
-
-          <div class="resultsGrid">
-            <div class="row"><div class="rowLabel">Risk (EUR)</div><div class="rowValue" id="riskOut_dup">-</div></div>
-            <div class="row"><div class="rowLabel">Loss per 1 lot (EUR)</div><div class="rowValue" id="lossPerLotOut">-</div></div>
-            <div class="row"><div class="rowLabel">Position size (lots)</div><div class="rowValue" id="lotsOut_dup">-</div></div>
-            <div class="row"><div class="rowLabel">SL distance (units)</div><div class="rowValue" id="slUnitsOut">-</div></div>
-            <div class="row"><div class="rowLabel">TP distance (units)</div><div class="rowValue" id="tpUnitsOut">-</div></div>
-            <div class="row"><div class="rowLabel">SL price</div><div class="rowValue" id="slPriceOut">-</div></div>
-            <div class="row"><div class="rowLabel">TP price</div><div class="rowValue" id="tpPriceOut">-</div></div>
-          </div>
-
-          <div class="divider"></div>
-
-          <div class="resultsGrid">
-            <div class="row"><div class="rowLabel">Total lot</div><div class="rowValue" id="totalLotOut">-</div></div>
-            <div class="row"><div class="rowLabel">Lot 1 (TP1)</div><div class="rowValue" id="lot1Out">-</div></div>
-            <div class="row"><div class="rowLabel">Lot 2 (TP2)</div><div class="rowValue" id="lot2Out">-</div></div>
-            <div class="row"><div class="rowLabel">TP1 price</div><div class="rowValue" id="tp1PriceOut">-</div></div>
-            <div class="row"><div class="rowLabel">TP2 price</div><div class="rowValue" id="tp2PriceOut">-</div></div>
-            <div class="row"><div class="rowLabel">Break-even after TP1</div><div class="rowValue" id="beAfterTp1Out">Yes</div></div>
-          </div>
-
-          <div class="divider"></div>
-
-          <div class="row">
-            <div class="rowLabel">Decision (Can I take this trade?)</div>
-            <div class="rowValue" id="decisionOut_dup">-</div>
+        <div id="premiumUpsell" class="card">
+          <div class="premiumBox">
+            <h4>Unlock Trial / Pro</h4>
+            <p>Zone mode, split TP, challenge engine, reality check, discipline tools and custom symbols are premium features.</p>
+            <button id="upgradeBtnSecondary2" type="button">Upgrade now</button>
           </div>
         </div>
 
-        <div class="card proCard" id="realityCard">
-          <div class="cardHeader">
-            <div>
-              <h3 class="sectionTitle">Pre-trade reality check</h3>
-              <div class="sectionSub">See the real impact of this trade before you enter</div>
-            </div>
-            <span class="premiumTag">PRO</span>
-          </div>
+        <div id="realityCard" class="card">
+          <h3 class="sectionTitle">Pre-trade reality check</h3>
+          <div class="sectionSub">See the real impact of the trade before you enter</div>
 
-          <div class="resultsGrid">
-            <div class="row"><div class="rowLabel">If SL hits → new balance</div><div class="rowValue" id="balanceAfterSlOut">-</div></div>
-            <div class="row"><div class="rowLabel">If TP1 hits → profit</div><div class="rowValue" id="profitTp1Out">-</div></div>
-            <div class="row"><div class="rowLabel">If TP2 hits → profit</div><div class="rowValue" id="profitTp2Out">-</div></div>
-            <div class="row"><div class="rowLabel">This trade uses % of remaining daily limit</div><div class="rowValue" id="dailyUsePctOut">-</div></div>
-            <div class="row"><div class="rowLabel">Reality check</div><div class="rowValue" id="realityCheckOut">-</div></div>
-          </div>
+          <div class="row"><div>If SL hits → new balance</div><div id="balanceAfterSlOut">-</div></div>
+          <div class="row"><div>If TP1 hits → profit</div><div id="profitTp1Out">-</div></div>
+          <div class="row"><div>If TP2 hits → profit</div><div id="profitTp2Out">-</div></div>
+          <div class="row"><div>This trade uses % of remaining daily limit</div><div id="dailyUsePctOut">-</div></div>
+          <div class="row"><div>Reality check</div><div id="realityCheckOut">-</div></div>
         </div>
 
-        <div class="card proCard" id="challengeCard">
-          <div class="cardHeader">
-            <div>
-              <h3 class="sectionTitle">Prop Challenge Engine</h3>
-              <div class="sectionSub">Challenge limits and remaining room</div>
-            </div>
-            <span class="premiumTag">PRO</span>
-          </div>
+        <div id="challengeCard" class="card">
+          <h3 class="sectionTitle">Prop Challenge Engine</h3>
+          <div class="sectionSub">Challenge limits and remaining room</div>
 
           <div class="btnRow" style="margin-bottom:12px;">
-            <button id="presetChallenge10K" type="button">Challenge 10K</button>
-            <button id="presetChallenge25K" type="button">Challenge 25K</button>
-            <button id="presetChallenge50K" type="button">Challenge 50K</button>
-            <button id="presetChallenge100K" type="button">Challenge 100K</button>
+            <button id="presetChallenge10K" type="button" class="secondary">Challenge 10K</button>
+            <button id="presetChallenge25K" type="button" class="secondary">Challenge 25K</button>
+            <button id="presetChallenge50K" type="button" class="secondary">Challenge 50K</button>
+            <button id="presetChallenge100K" type="button" class="secondary">Challenge 100K</button>
           </div>
 
-          <div id="proControls">
-            <div class="grid3">
-              <div>
-                <label>Account size (EUR)</label>
-                <input id="accountSize" type="text" inputmode="decimal" value="10000">
-              </div>
-              <div>
-                <label>Daily loss %</label>
-                <input id="dailyLossPct" type="text" inputmode="decimal" value="5">
-              </div>
-              <div>
-                <label>Max loss %</label>
-                <input id="maxLossPct" type="text" inputmode="decimal" value="10">
-              </div>
+          <div class="grid3">
+            <div>
+              <label>Account size (EUR)</label>
+              <input id="accountSize" type="text" inputmode="decimal" value="10000">
             </div>
-
-            <div class="grid2">
-              <div>
-                <label>Today PnL (EUR)</label>
-                <input id="todayPnl" type="text" inputmode="decimal" value="0">
-              </div>
-              <div>
-                <label>Total PnL (EUR)</label>
-                <input id="totalPnL" type="text" inputmode="decimal" value="0">
-              </div>
+            <div>
+              <label>Daily loss %</label>
+              <input id="dailyLossPct" type="text" inputmode="decimal" value="5">
             </div>
-
-            <div class="resultsGrid">
-              <div class="row"><div class="rowLabel">Remaining Daily (EUR)</div><div class="rowValue" id="remainingDailyOut_dup">-</div></div>
-              <div class="row"><div class="rowLabel">Remaining Overall (EUR)</div><div class="rowValue" id="remainingOverallOut">-</div></div>
-              <div class="row"><div class="rowLabel">Trade Status</div><div class="rowValue" id="tradeStatusOut">-</div></div>
-            </div>
-
-            <div class="tiny" style="margin-top:8px;">
-              If trade risk is bigger than remaining Daily/Overall room, the engine blocks it.
+            <div>
+              <label>Max loss %</label>
+              <input id="maxLossPct" type="text" inputmode="decimal" value="10">
             </div>
           </div>
+
+          <div class="grid2" style="margin-top:12px;">
+            <div>
+              <label>Today PnL (EUR)</label>
+              <input id="todayPnl" type="text" inputmode="decimal" value="0">
+            </div>
+            <div>
+              <label>Total PnL (EUR)</label>
+              <input id="totalPnL" type="text" inputmode="decimal" value="0">
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="row"><div>Remaining Daily (EUR)</div><div id="remainingDailyOut_dup">-</div></div>
+          <div class="row"><div>Remaining Overall (EUR)</div><div id="remainingOverallOut">-</div></div>
+          <div class="row"><div>Trade Status</div><div id="tradeStatusOut">-</div></div>
         </div>
-
       </div>
-    </div>
-
-    <div class="footerNote">
-      PropEngine • Free / Trial / Pro structure ready • Stripe can be connected later
     </div>
   </div>
 
-  <script type="module" src="app.js?v=1002"></script>
-  <script>
-    const mirrorIds = [
-      ["riskOut", "riskOut_dup"],
-      ["lotsOut", "lotsOut_dup"],
-      ["decisionOut", "decisionOut_dup"],
-      ["remainingDailyOut", "remainingDailyOut_dup"]
-    ];
-
-    const observer = new MutationObserver(() => {
-      mirrorIds.forEach(([src, dst]) => {
-        const s = document.getElementById(src);
-        const d = document.getElementById(dst);
-        if (s && d) d.textContent = s.textContent;
-      });
-
-      const badge = document.getElementById("planBadge");
-      if (badge) {
-        badge.classList.remove("free", "trial", "pro");
-        if (badge.textContent.includes("Pro")) badge.classList.add("pro");
-        else if (badge.textContent.includes("Trial")) badge.classList.add("trial");
-        else badge.classList.add("free");
-      }
-    });
-
-    window.addEventListener("DOMContentLoaded", () => {
-      observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-      document.getElementById("upgradeBtnSecondary2")?.addEventListener("click", () => {
-        document.getElementById("upgradeBtn")?.click();
-      });
-    });
-  </script>
+  <script src="app.js?v=727"></script>
 </body>
 </html>
