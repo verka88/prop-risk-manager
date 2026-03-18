@@ -75,7 +75,7 @@ function fmt(n, digits = 2) {
 }
 
 function money(n) {
-  return ${Number(n).toFixed(2)} €;
+  return Number(n).toFixed(2) + " €";
 }
 
 function floorToStep(value, step) {
