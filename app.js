@@ -212,7 +212,7 @@ function renderAuth() {
   if (isSignedIn()) {
     show("authSignedOut", false);
     show("authSignedIn", true);
-    setText("userStatus", Signed in: ${authState.email});
+   setText("userStatus", "Signed in: " + authState.email);
 
     if (isProActive()) {
       setText("trialBanner", "PropEngine Pro active.");
