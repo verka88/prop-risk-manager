@@ -43,7 +43,7 @@ let customSymbols = [];
 
 function parseNum(value, fallback = 0) {
   if (value === null || value === undefined) return fallback;
-  const cleaned = String(value).replace(/\s/g, "").replace(",", ".").trim();
+  const cleaned = String(value).replaceAll(" ", "").replace(",", ".").trim();
   const n = parseFloat(cleaned);
   return Number.isFinite(n) ? n : fallback;
 }
