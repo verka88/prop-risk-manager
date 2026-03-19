@@ -200,7 +200,7 @@ function renderPlanBadge() {
 
   if (isTrialActive()) {
     el.classList.add("trial");
-    el.textContent = Trial ${trialDaysLeft()}d;
+    el.textContent = "Trial " + trialDaysLeft() + "d";
     return;
   }
 
