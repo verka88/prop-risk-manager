@@ -326,15 +326,16 @@ function renderAuth() {
       show("startTrialBtn", false);
       show("upgradeBtn", true);
     } else {
-      setText("trialBanner", "Free plan active. Upgrade to unlock premium features.");
+      setText("trialBanner", "Free plan active.");
       show("startTrialBtn", true);
       show("upgradeBtn", true);
     }
+
   } else {
     show("authSignedOut", true);
     show("authSignedIn", false);
     setText("userStatus", "Not signed in");
-    setText("trialBanner", "Create account to activate Trial and unlock premium tools.");
+    setText("trialBanner", "Create account to start trial.");
     show("startTrialBtn", true);
     show("upgradeBtn", true);
   }
