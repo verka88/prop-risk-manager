@@ -865,12 +865,14 @@ function init() {
   loadCustomSymbols();
 const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get("paid") === "true") {
-    authState.plan = "pro";
-    saveAuth();
-    renderAll();
-    const cleanUrl = window.location.origin + window.location.pathname;
-    window.history.replaceState({}, document.title, cleanUrl);
-  }
+  authState.plan = "pro";
+  authState.trialStart = null;
+  saveAuth();
+
+  const cleanUrl = window.location.origin + window.location.pathname;
+  window.location.replace(cleanUrl);
+  return;
+}
 
   seedDefaults();
   populateSymbols();
