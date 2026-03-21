@@ -1,7 +1,3 @@
-const supabase = window.supabase.createClient(
-  'https://lbavhqpkngwhtmnkmef.supabase.co',
-  'sb_publishable_Yj6jxmzZowuGmFXKdyFj4w_86Hgh6q2'
-)
 const $ = (id) => document.getElementById(id);
 
 const STORAGE = {
@@ -867,16 +863,6 @@ function init() {
   loadLock();
   loadModes();
   loadCustomSymbols();
-const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get("paid") === "true") {
-  authState.plan = "pro";
-  authState.trialStart = null;
-  saveAuth();
-
-  const cleanUrl = window.location.origin + window.location.pathname;
-  window.location.replace(cleanUrl);
-  return;
-}
 
   seedDefaults();
   populateSymbols();
