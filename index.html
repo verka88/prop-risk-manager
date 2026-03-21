@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PropEngine - Prop Firm Risk Tool</title>
+
   <style>
     :root {
       --bg: #0a0d14;
@@ -224,7 +225,8 @@
       font: inherit;
     }
 
-    input, select {
+    input,
+    select {
       width: 100%;
       padding: 13px 14px;
       border-radius: 16px;
@@ -238,7 +240,8 @@
       z-index: 2;
     }
 
-    input:focus, select:focus {
+    input:focus,
+    select:focus {
       border-color: rgba(79,124,255,.75);
       box-shadow: 0 0 0 3px rgba(79,124,255,.12);
     }
@@ -354,6 +357,12 @@
       line-height: 1.5;
     }
 
+    /* dropdown visibility fix */
+    select option {
+      color: #111827;
+      background: #ffffff;
+    }
+
     @media (max-width: 1020px) {
       .dashboard {
         grid-template-columns: 1fr 1fr;
@@ -369,28 +378,28 @@
     }
 
     @media (max-width: 760px) {
-      .grid2, .grid3, .grid4, .btnRow, .modeSwitch, .dashboard {
+      .grid2,
+      .grid3,
+      .grid4,
+      .btnRow,
+      .modeSwitch,
+      .dashboard {
         grid-template-columns: 1fr;
       }
 
       .brandTitle {
         font-size: 28px;
-       } 
-     select option {
-  color: #111827;
-  background: #ffffff; 
+      }
     }
   </style>
 </head>
 <body>
   <div class="wrap">
-
     <div class="topbar">
       <div>
         <h1 class="brandTitle">PropEngine</h1>
         <div class="brandSub">Prop Firm Risk, Discipline &amp; Decision Dashboard</div>
       </div>
-
       <div class="topbarRight">
         <span id="planBadge" class="pill free">Free Plan</span>
         <button id="upgradeBtnSecondary" style="width:auto; min-width:140px;">Upgrade</button>
@@ -430,7 +439,6 @@
 
     <div class="layout">
       <div class="stack">
-
         <div class="card">
           <h3 class="sectionTitle">Account</h3>
           <div class="sectionSub">Create account to activate Trial and unlock premium tools</div>
@@ -520,12 +528,10 @@
               <label>Balance (EUR)</label>
               <input id="balance" type="text" inputmode="decimal" value="10000">
             </div>
-
             <div>
               <label>Risk %</label>
               <input id="riskPct" type="text" inputmode="decimal" value="0,5">
             </div>
-
             <div>
               <label>Entry price</label>
               <input id="entry" type="text" inputmode="decimal" value="1,10000">
@@ -539,13 +545,11 @@
                 <input id="slUnits" type="text" inputmode="decimal" value="15">
                 <div class="tiny">Example: 15 units</div>
               </div>
-
               <div>
                 <label id="tpUnitsLabel">TP (pips)</label>
                 <input id="tpUnits" type="text" inputmode="decimal" value="">
                 <div class="tiny">Leave empty → uses RR</div>
               </div>
-
               <div>
                 <label>TP buffer (pips/ticks)</label>
                 <input id="tpBuffer" type="text" inputmode="decimal" value="0">
@@ -596,13 +600,11 @@
               <input id="unitSize" type="text" inputmode="decimal" value="0,0001">
               <div class="tiny">Editable override</div>
             </div>
-
             <div>
               <label>Value per unit @ 1 lot (EUR)</label>
               <input id="valuePerUnit" type="text" inputmode="decimal" value="10">
               <div class="tiny">Most important for accuracy</div>
             </div>
-
             <div>
               <label>Lot step</label>
               <input id="lotStep" type="text" inputmode="decimal" value="0,01">
@@ -675,7 +677,6 @@
       </div>
 
       <div class="stack rightSticky">
-
         <div id="premiumUpsell" class="card">
           <div class="premiumBox">
             <h4>Unlock Trial / Pro</h4>
@@ -742,6 +743,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=727"></script>
+  <script src="app.js?v=728"></script>
 </body>
 </html>
