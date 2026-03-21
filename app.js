@@ -1,3 +1,7 @@
+const supabase = window.supabase.createClient(
+  'https://lbavhqpkngwhtmnkmef.supabase.co',
+  'sb_publishable_Yj6jxmzZowuGmFXKdyFj4w_86Hgh6q2'
+)
 const $ = (id) => document.getElementById(id);
 
 const STORAGE = {
