@@ -195,13 +195,14 @@ function signUp() {
     return;
   }
   authState.signedIn = true;
-  authState.email = email;
-  if (!authState.trialStart && authState.plan !== "pro") {
-    authState.plan = "trial";
-    authState.trialStart = Date.now();
-  }
-  saveAuth();
-  renderAll();
+authState.email = email;
+authState.plan = "trial";
+authState.trialStart = Date.now();
+authState.trialDays = 7;
+
+saveAuth();
+renderAll();
+
 }
 
 function signIn() {
