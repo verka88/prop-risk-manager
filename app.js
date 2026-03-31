@@ -1,5 +1,8 @@
 const $ = (id) => document.getElementById(id);
+const supabaseUrl = "https://lbavhqpkvngwhtmnkmef.supabase.co";
+const supabaseKey = "sb_publishable_Yj6jxmzZowuGmFXKdyFj4w_86Hgh6q2";
 
+const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 const STORAGE = {
   AUTH: "propengine_auth_v1001",
   LOCK: "propengine_lock_v1001",
