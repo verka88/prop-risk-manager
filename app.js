@@ -877,3 +877,38 @@ function init() {
 }
 
 document.addEventListener("DOMContentLoaded", init);
+async function signUp() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  console.log("SIGN UP CLICK");
+
+  const { data, error } = await supabase.auth.signUp({
+    email: email,
+    password: password
+  });
+
+  if (error) {
+    alert("ERROR: " + error.message);
+  } else {
+    alert("Account created! Check email 📩");
+  }
+}
+
+async function signIn() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  console.log("SIGN IN CLICK");
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: email,
+    password: password
+  });
+
+  if (error) {
+    alert("ERROR: " + error.message);
+  } else {
+    alert("Logged in ✅");
+  }
+}
