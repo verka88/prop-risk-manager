@@ -1,8 +1,5 @@
 const $ = (id) => document.getElementById(id);
-const supabaseUrl = "https://lbavhqpkvngwhtmnkmef.supabase.co";
-const supabaseKey = "sb_publishable_Yj6jxmzZowuGmFXKdyFj4w_86Hgh6q2";
 
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 const STORAGE = {
   AUTH: "propengine_auth_v1001",
   LOCK: "propengine_lock_v1001",
@@ -198,14 +195,13 @@ function signUp() {
     return;
   }
   authState.signedIn = true;
-authState.email = email;
-authState.plan = "trial";
-authState.trialStart = Date.now();
-authState.trialDays = 7;
-
-saveAuth();
-renderAll();
-
+  authState.email = email;
+  if (!authState.trialStart && authState.plan !== "pro") {
+    authState.plan = "trial";
+    authState.trialStart = Date.now();
+  }
+  saveAuth();
+  renderAll();
 }
 
 function signIn() {
@@ -877,38 +873,3 @@ function init() {
 }
 
 document.addEventListener("DOMContentLoaded", init);
-async function signUp() {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-
-  console.log("SIGN UP CLICK");
-
-  const { data, error } = await supabase.auth.signUp({
-    email: email,
-    password: password
-  });
-
-  if (error) {
-    alert("ERROR: " + error.message);
-  } else {
-    alert("Account created! Check email 📩");
-  }
-}
-
-async function signIn() {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-
-  console.log("SIGN IN CLICK");
-
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: email,
-    password: password
-  });
-
-  if (error) {
-    alert("ERROR: " + error.message);
-  } else {
-    alert("Logged in ✅");
-  }
-}
