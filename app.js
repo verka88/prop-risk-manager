@@ -1,748 +1,875 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PropEngine - Prop Firm Risk Tool</title>
+const $ = (id) => document.getElementById(id);
 
-  <style>
-    :root {
-      --bg: #0a0d14;
-      --panel: #111622;
-      --panel-2: #161c2b;
-      --line: #25304a;
-      --soft-line: #1b2335;
-      --text: #f3f6ff;
-      --muted: #9aa6c7;
-      --green: #22c55e;
-      --red: #ef4444;
-      --orange: #f59e0b;
-      --blue: #4f7cff;
-      --blue-2: #7aa2ff;
-      --shadow: 0 16px 40px rgba(0,0,0,.32);
-      --radius: 20px;
+const STORAGE = {
+  AUTH: "propengine_auth_v1001",
+  LOCK: "propengine_lock_v1001",
+  MODES: "propengine_modes_v1001",
+  CUSTOM_SYMBOLS: "propengine_custom_symbols_v1001"
+};
+
+const DEFAULT_SYMBOLS = [
+  { name: "EURUSD", group: "FX", unitSize: 0.0001, valuePerUnit: 10, lotStep: 0.01, slLabel: "SL (pips)", tpLabel: "TP (pips)" },
+  { name: "GBPUSD", group: "FX", unitSize: 0.0001, valuePerUnit: 10, lotStep: 0.01, slLabel: "SL (pips)", tpLabel: "TP (pips)" },
+  { name: "AUDUSD", group: "FX", unitSize: 0.0001, valuePerUnit: 10, lotStep: 0.01, slLabel: "SL (pips)", tpLabel: "TP (pips)" },
+  { name: "NZDUSD", group: "FX", unitSize: 0.0001, valuePerUnit: 10, lotStep: 0.01, slLabel: "SL (pips)", tpLabel: "TP (pips)" },
+  { name: "USDCHF", group: "FX", unitSize: 0.0001, valuePerUnit: 10, lotStep: 0.01, slLabel: "SL (pips)", tpLabel: "TP (pips)" },
+  { name: "EURCHF", group: "FX", unitSize: 0.0001, valuePerUnit: 10, lotStep: 0.01, slLabel: "SL (pips)", tpLabel: "TP (pips)" },
+  { name: "USDJPY", group: "FX", unitSize: 0.01, valuePerUnit: 9, lotStep: 0.01, slLabel: "SL (pips)", tpLabel: "TP (pips)" },
+  { name: "EURJPY", group: "FX", unitSize: 0.01, valuePerUnit: 6.2, lotStep: 0.01, slLabel: "SL (pips)", tpLabel: "TP (pips)" },
+  { name: "GBPJPY", group: "FX", unitSize: 0.01, valuePerUnit: 6.4, lotStep: 0.01, slLabel: "SL (pips)", tpLabel: "TP (pips)" },
+  { name: "XAUUSD", group: "Metals", unitSize: 0.01, valuePerUnit: 1, lotStep: 0.01, slLabel: "SL (points)", tpLabel: "TP (points)" },
+  { name: "BTCUSD", group: "Crypto", unitSize: 1, valuePerUnit: 1, lotStep: 0.01, slLabel: "SL (USD)", tpLabel: "TP (USD)" },
+  { name: "ETHUSD", group: "Crypto", unitSize: 0.1, valuePerUnit: 1, lotStep: 0.01, slLabel: "SL (USD)", tpLabel: "TP (USD)" },
+  { name: "NAS100", group: "Index", unitSize: 1, valuePerUnit: 1, lotStep: 0.01, slLabel: "SL (points)", tpLabel: "TP (points)" },
+  { name: "US30", group: "Index", unitSize: 1, valuePerUnit: 1, lotStep: 0.01, slLabel: "SL (points)", tpLabel: "TP (points)" },
+  { name: "GER40", group: "Index", unitSize: 1, valuePerUnit: 1, lotStep: 0.01, slLabel: "SL (points)", tpLabel: "TP (points)" }
+];
+
+let authState = {
+  signedIn: false,
+  email: "",
+  plan: "free",
+  trialStart: null,
+  trialDays: 7
+};
+
+let lockState = {
+  streak: 0,
+  lockedUntil: null
+};
+
+let calcMode = "manual";
+let appMode = "quick";
+let customSymbols = [];
+let lastResult = null;
+
+function parseNum(value, fallback = 0) {
+  if (value === null || value === undefined) return fallback;
+  const cleaned = String(value).replace(/\s+/g, "").replace(",", ".").trim();
+  const n = parseFloat(cleaned);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function inputNum(id, fallback = 0) {
+  const el = $(id);
+  if (!el) return fallback;
+  return parseNum(el.value, fallback);
+}
+
+function setText(id, value) {
+  const el = $(id);
+  if (el) el.textContent = value;
+}
+
+function setValue(id, value) {
+  const el = $(id);
+  if (el) el.value = value;
+}
+
+function show(id, visible = true) {
+  const el = $(id);
+  if (!el) return;
+  el.classList.toggle("hidden", !visible);
+}
+
+function fmt(n, digits = 2) {
+  return Number(n).toFixed(digits);
+}
+
+function money(n) {
+  return `${Number(n).toFixed(2)} €`;
+}
+
+function floorToStep(value, step) {
+  if (!step || step <= 0) return value;
+  return Math.floor(value / step) * step;
+}
+
+function setStatusClass(id, type) {
+  const el = $(id);
+  if (!el) return;
+  el.classList.remove("ok", "warn", "bad");
+  if (type === "ok") el.classList.add("ok");
+  if (type === "warn") el.classList.add("warn");
+  if (type === "bad") el.classList.add("bad");
+}
+
+function saveAuth() {
+  localStorage.setItem(STORAGE.AUTH, JSON.stringify(authState));
+}
+
+function loadAuth() {
+  try {
+    const raw = localStorage.getItem(STORAGE.AUTH);
+    if (!raw) return;
+    authState = { ...authState, ...JSON.parse(raw) };
+  } catch (e) {
+    console.error("Auth load error", e);
+  }
+}
+
+function saveLock() {
+  localStorage.setItem(STORAGE.LOCK, JSON.stringify(lockState));
+}
+
+function loadLock() {
+  try {
+    const raw = localStorage.getItem(STORAGE.LOCK);
+    if (!raw) return;
+    lockState = { ...lockState, ...JSON.parse(raw) };
+  } catch (e) {
+    console.error("Lock load error", e);
+  }
+}
+
+function saveModes() {
+  localStorage.setItem(STORAGE.MODES, JSON.stringify({ calcMode, appMode }));
+}
+
+function loadModes() {
+  try {
+    const raw = localStorage.getItem(STORAGE.MODES);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (parsed.calcMode) calcMode = parsed.calcMode;
+    if (parsed.appMode) appMode = parsed.appMode;
+  } catch (e) {
+    console.error("Modes load error", e);
+  }
+}
+
+function saveCustomSymbols() {
+  localStorage.setItem(STORAGE.CUSTOM_SYMBOLS, JSON.stringify(customSymbols));
+}
+
+function loadCustomSymbols() {
+  try {
+    const raw = localStorage.getItem(STORAGE.CUSTOM_SYMBOLS);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) customSymbols = parsed;
+  } catch (e) {
+    console.error("Custom symbols load error", e);
+  }
+}
+
+function allSymbols() {
+  return DEFAULT_SYMBOLS.concat(customSymbols);
+}
+
+function findSymbol(name) {
+  return allSymbols().find((s) => s.name === name) || DEFAULT_SYMBOLS[0];
+}
+
+function getSelectedSymbolName() {
+  return $("symbol")?.value || "EURUSD";
+}
+
+function isTrialActive() {
+  if (!authState.trialStart) return false;
+  if (authState.plan === "pro") return false;
+  const end = authState.trialStart + authState.trialDays * 24 * 60 * 60 * 1000;
+  return Date.now() < end;
+}
+
+function trialDaysLeft() {
+  if (!authState.trialStart) return 0;
+  const end = authState.trialStart + authState.trialDays * 24 * 60 * 60 * 1000;
+  const diff = end - Date.now();
+  return diff > 0 ? Math.ceil(diff / (24 * 60 * 60 * 1000)) : 0;
+}
+
+function isProActive() {
+  return authState.plan === "pro";
+}
+
+function hasPremium() {
+  return isProActive() || isTrialActive();
+}
+
+function signUp() {
+  const email = $("email")?.value.trim() || "";
+  const password = $("password")?.value || "";
+  if (!email || !password) {
+    alert("Enter email and password.");
+    return;
+  }
+  authState.signedIn = true;
+  authState.email = email;
+  if (!authState.trialStart && authState.plan !== "pro") {
+    authState.plan = "trial";
+    authState.trialStart = Date.now();
+  }
+  saveAuth();
+  renderAll();
+}
+
+function signIn() {
+  const email = $("email")?.value.trim() || "";
+  const password = $("password")?.value || "";
+  if (!email || !password) {
+    alert("Enter email and password.");
+    return;
+  }
+  authState.signedIn = true;
+  authState.email = email;
+  if (!authState.trialStart && authState.plan !== "pro") {
+    authState.plan = "trial";
+    authState.trialStart = Date.now();
+  }
+  saveAuth();
+  renderAll();
+}
+
+function signOut() {
+  authState.signedIn = false;
+  authState.email = "";
+  saveAuth();
+  renderAll();
+}
+
+function startTrial() {
+  if (!authState.trialStart) {
+    authState.plan = "trial";
+    authState.trialStart = Date.now();
+    saveAuth();
+  }
+  renderAll();
+}
+
+function upgradePlan() {
+  authState.plan = "pro";
+  saveAuth();
+  renderAll();
+}
+
+function renderPlanBadge() {
+  const badge = $("planBadge");
+  if (!badge) return;
+
+  badge.className = "pill";
+
+  if (isProActive()) {
+    badge.classList.add("pro");
+    badge.textContent = "Pro Plan";
+  } else if (isTrialActive()) {
+    badge.classList.add("trial");
+    badge.textContent = `Trial ${trialDaysLeft()}d`;
+  } else {
+    badge.classList.add("free");
+    badge.textContent = "Free Plan";
+  }
+}
+
+function renderAuth() {
+  show("authSignedOut", !authState.signedIn);
+  show("authSignedIn", authState.signedIn);
+
+  if (authState.signedIn) {
+    setText("userStatus", `Signed in: ${authState.email}`);
+    if (isProActive()) {
+      setText("trialBanner", "PropEngine Pro active.");
+      show("startTrialBtn", false);
+      show("upgradeBtn", false);
+    } else if (isTrialActive()) {
+      setText("trialBanner", `PropEngine Trial active - ${trialDaysLeft()}d`);
+      show("startTrialBtn", false);
+      show("upgradeBtn", true);
+    } else {
+      setText("trialBanner", "Free plan active.");
+      show("startTrialBtn", true);
+      show("upgradeBtn", true);
     }
+  }
+}
 
-    * {
-      box-sizing: border-box;
+function renderModeUI() {
+  $("manualCalcModeBtn")?.classList.toggle("active", calcMode === "manual");
+  $("zoneCalcModeBtn")?.classList.toggle("active", calcMode === "zone");
+
+  $("quickModeBtn")?.classList.toggle("active", appMode === "quick");
+  $("disciplineModeBtn")?.classList.toggle("active", appMode === "discipline");
+
+  show("manualModeFields", calcMode === "manual");
+  show("zoneModeFields", calcMode === "zone");
+
+  // Discipline cards are visible only in discipline mode or premium
+  if ($("lockCard")) show("lockCard", appMode === "discipline");
+  if ($("realityCard")) show("realityCard", true);
+  if ($("challengeCard")) show("challengeCard", true);
+
+  // Upsell box only when no premium
+  show("premiumUpsell", !hasPremium());
+}
+
+function populateSymbols() {
+  const select = $("symbol");
+  if (!select) return;
+
+  const current = select.value || "EURUSD";
+  select.innerHTML = "";
+
+  allSymbols().forEach((sym) => {
+    const opt = document.createElement("option");
+    opt.value = sym.name;
+    opt.textContent = `${sym.name}`;
+    select.appendChild(opt);
+  });
+
+  select.value = findSymbol(current).name;
+}
+
+function filterSymbols() {
+  const q = $("symbolSearch")?.value.trim().toUpperCase() || "";
+  const select = $("symbol");
+  if (!select) return;
+
+  const current = getSelectedSymbolName();
+  select.innerHTML = "";
+
+  const filtered = allSymbols().filter((s) => {
+    return !q || s.name.includes(q) || s.group.toUpperCase().includes(q);
+  });
+
+  (filtered.length ? filtered : allSymbols()).forEach((sym) => {
+    const opt = document.createElement("option");
+    opt.value = sym.name;
+    opt.textContent = sym.name;
+    select.appendChild(opt);
+  });
+
+  select.value = findSymbol(current).name;
+}
+
+function applySymbolToInputs() {
+  const sym = findSymbol(getSelectedSymbolName());
+
+  setValue("unitSize", String(sym.unitSize).replace(".", ","));
+  setValue("valuePerUnit", String(sym.valuePerUnit).replace(".", ","));
+  setValue("lotStep", String(sym.lotStep).replace(".", ","));
+
+  const slLabel = $("slUnitsLabel");
+  const tpLabel = $("tpUnitsLabel");
+  if (slLabel) slLabel.textContent = sym.slLabel;
+  if (tpLabel) tpLabel.textContent = sym.tpLabel;
+}
+
+function addCustomSymbol() {
+  const name = $("customSymbolName")?.value.trim().toUpperCase();
+  const unitSize = parseNum($("customUnitSize")?.value, 0.01);
+  const valuePerUnit = parseNum($("customValuePerUnit")?.value, 1);
+  const lotStep = parseNum($("customLotStep")?.value, 0.01);
+
+  if (!name) {
+    alert("Enter symbol name.");
+    return;
+  }
+
+  customSymbols.push({
+    name,
+    group: "Custom",
+    unitSize,
+    valuePerUnit,
+    lotStep,
+    slLabel: "SL (units)",
+    tpLabel: "TP (units)"
+  });
+
+  saveCustomSymbols();
+  populateSymbols();
+  setValue("symbol", name);
+  applySymbolToInputs();
+
+  setValue("customSymbolName", "");
+  setValue("customUnitSize", "");
+  setValue("customValuePerUnit", "");
+  setValue("customLotStep", "");
+
+  show("addSymbolBox", false);
+}
+
+function getDirection() {
+  return $("direction")?.value === "SHORT" ? "SHORT" : "LONG";
+}
+
+function getRiskMoney(balance, riskPct) {
+  return balance * (riskPct / 100);
+}
+
+function calcManual() {
+  const balance = inputNum("balance", 10000);
+  const riskPct = inputNum("riskPct", 0.5);
+  const entry = inputNum("entry", 1.1);
+  const slUnits = inputNum("slUnits", 15);
+  const tpUnitsInput = inputNum("tpUnits", 0);
+  const rr = inputNum("rr", 2);
+  const tpBuffer = inputNum("tpBuffer", 0);
+  const unitSize = inputNum("unitSize", 0.0001);
+  const valuePerUnit = inputNum("valuePerUnit", 10);
+  const lotStep = inputNum("lotStep", 0.01);
+  const direction = getDirection();
+
+  const riskEur = getRiskMoney(balance, riskPct);
+  const lossPerLot = slUnits * valuePerUnit;
+  const totalLot = lossPerLot > 0 ? floorToStep(riskEur / lossPerLot, lotStep) : 0;
+
+  const usedTpUnits = tpUnitsInput > 0 ? tpUnitsInput + tpBuffer : (slUnits * rr) + tpBuffer;
+
+  let slPrice, tpPrice, tp1Price, tp2Price;
+  if (direction === "LONG") {
+    slPrice = entry - slUnits * unitSize;
+    tpPrice = entry + usedTpUnits * unitSize;
+    tp1Price = entry + slUnits * unitSize;
+    tp2Price = entry + (slUnits * rr) * unitSize;
+  } else {
+    slPrice = entry + slUnits * unitSize;
+    tpPrice = entry - usedTpUnits * unitSize;
+    tp1Price = entry - slUnits * unitSize;
+    tp2Price = entry - (slUnits * rr) * unitSize;
+  }
+
+  const lot1 = floorToStep(totalLot / 2, lotStep);
+  const lot2 = floorToStep(totalLot - lot1, lotStep);
+
+  return {
+    mode: "manual",
+    balance,
+    riskPct,
+    direction,
+    entry,
+    riskEur,
+    lossPerLot,
+    positionLots: totalLot,
+    totalLot,
+    lot1,
+    lot2,
+    slDistanceUnits: slUnits,
+    tpDistanceUnits: usedTpUnits,
+    slPrice,
+    tpPrice,
+    tp1Price,
+    tp2Price,
+    breakEvenAfterTP1: "Yes",
+    tp1Profit: lot1 * slUnits * valuePerUnit,
+    tp2Profit: lot2 * slUnits * rr * valuePerUnit
+  };
+}
+
+function calcZone() {
+  const balance = inputNum("balance", 10000);
+  const riskPct = inputNum("riskPct", 0.5);
+  const entry = inputNum("entry", 1.1);
+  const zoneTop = inputNum("zoneTop", entry);
+  const zoneBottom = inputNum("zoneBottom", entry);
+  const rr = inputNum("rr", 2);
+  const unitSize = inputNum("unitSize", 0.0001);
+  const valuePerUnit = inputNum("valuePerUnit", 10);
+  const lotStep = inputNum("lotStep", 0.01);
+  const zoneBuffer = inputNum("zoneBuffer", 2);
+  const direction = getDirection();
+
+  const zoneSizePrice = Math.abs(zoneTop - zoneBottom);
+  const zoneSize = unitSize > 0 ? zoneSizePrice / unitSize : 0;
+  const slUnits = zoneSize + zoneBuffer;
+
+  const riskEur = getRiskMoney(balance, riskPct);
+  const lossPerLot = slUnits * valuePerUnit;
+  const totalLot = lossPerLot > 0 ? floorToStep(riskEur / lossPerLot, lotStep) : 0;
+
+  let slPrice, tpPrice, tp1Price, tp2Price;
+  if (direction === "LONG") {
+    slPrice = entry - slUnits * unitSize;
+    tp1Price = entry + slUnits * unitSize;
+    tp2Price = entry + (slUnits * rr) * unitSize;
+    tpPrice = tp2Price;
+  } else {
+    slPrice = entry + slUnits * unitSize;
+    tp1Price = entry - slUnits * unitSize;
+    tp2Price = entry - (slUnits * rr) * unitSize;
+    tpPrice = tp2Price;
+  }
+
+  const lot1 = floorToStep(totalLot / 2, lotStep);
+  const lot2 = floorToStep(totalLot - lot1, lotStep);
+
+  setValue("zoneSize", fmt(zoneSize, 2));
+  setValue("zoneSlUnits", fmt(slUnits, 2));
+  setValue("zoneTp1Units", fmt(slUnits, 2));
+  setValue("zoneTp2Units", fmt(slUnits * rr, 2));
+
+  return {
+    mode: "zone",
+    balance,
+    riskPct,
+    direction,
+    entry,
+    riskEur,
+    lossPerLot,
+    positionLots: totalLot,
+    totalLot,
+    lot1,
+    lot2,
+    slDistanceUnits: slUnits,
+    tpDistanceUnits: slUnits * rr,
+    slPrice,
+    tpPrice,
+    tp1Price,
+    tp2Price,
+    breakEvenAfterTP1: "Yes",
+    tp1Profit: lot1 * slUnits * valuePerUnit,
+    tp2Profit: lot2 * slUnits * rr * valuePerUnit
+  };
+}
+
+function renderResults(result) {
+  setText("riskOut", money(result.riskEur));
+  setText("riskOut_dup", money(result.riskEur));
+  setText("lotsOut", fmt(result.positionLots, 2));
+  setText("lotsOut_dup", fmt(result.positionLots, 2));
+
+  setText("lossPerLotOut", money(result.lossPerLot));
+  setText("slUnitsOut", fmt(result.slDistanceUnits, 2));
+  setText("tpUnitsOut", fmt(result.tpDistanceUnits, 2));
+  setText("slPriceOut", fmt(result.slPrice, 5));
+  setText("tpPriceOut", fmt(result.tpPrice, 5));
+
+  setText("totalLotOut", fmt(result.totalLot, 2));
+  setText("lot1Out", fmt(result.lot1, 2));
+  setText("lot2Out", fmt(result.lot2, 2));
+  setText("tp1PriceOut", fmt(result.tp1Price, 5));
+  setText("tp2PriceOut", fmt(result.tp2Price, 5));
+  setText("beAfterTp1Out", result.breakEvenAfterTP1);
+
+  renderRealityCheck(result);
+  renderChallenge();
+}
+
+function renderRealityCheck(result) {
+  const account = inputNum("accountSize", result.balance);
+  const dailyLossPct = inputNum("dailyLossPct", 5);
+  const todayPnl = inputNum("todayPnl", 0);
+
+  const remainingDaily = Math.max(0, account * (dailyLossPct / 100) + todayPnl);
+  const balanceAfterSl = result.balance - result.riskEur;
+  const dailyUsePct = remainingDaily > 0 ? (result.riskEur / remainingDaily) * 100 : 0;
+
+  setText("balanceAfterSlOut", money(balanceAfterSl));
+  setText("profitTp1Out", money(result.tp1Profit));
+  setText("profitTp2Out", money(result.tp1Profit + result.tp2Profit));
+  setText("dailyUsePctOut", fmt(dailyUsePct, 2) + "%");
+
+  const ok = dailyUsePct <= 100;
+  setText("realityCheckOut", ok ? "OK" : "Too big");
+  setStatusClass("realityCheckOut", ok ? "ok" : "bad");
+}
+
+function renderChallenge() {
+  const account = inputNum("accountSize", 10000);
+  const dailyLossPct = inputNum("dailyLossPct", 5);
+  const maxLossPct = inputNum("maxLossPct", 10);
+  const todayPnl = inputNum("todayPnl", 0);
+  const totalPnl = inputNum("totalPnL", 0);
+
+  const dailyLimit = account * (dailyLossPct / 100);
+  const maxLimit = account * (maxLossPct / 100);
+
+  const remainingDaily = Math.max(0, dailyLimit + todayPnl);
+  const remainingOverall = Math.max(0, maxLimit + totalPnl);
+
+  setText("remainingDailyOut", money(remainingDaily));
+  setText("remainingDailyOut_dup", money(remainingDaily));
+  setText("remainingOverallOut", money(remainingOverall));
+
+  if (lastResult) {
+    const ok = lastResult.riskEur <= remainingDaily && lastResult.riskEur <= remainingOverall;
+    setText("tradeStatusOut", ok ? "OK" : "Blocked");
+    setStatusClass("tradeStatusOut", ok ? "ok" : "bad");
+  } else {
+    setText("tradeStatusOut", "-");
+    setStatusClass("tradeStatusOut", "");
+  }
+}
+
+function renderDecision(result) {
+  const account = inputNum("accountSize", 10000);
+  const dailyLossPct = inputNum("dailyLossPct", 5);
+  const maxLossPct = inputNum("maxLossPct", 10);
+  const todayPnl = inputNum("todayPnl", 0);
+  const totalPnl = inputNum("totalPnL", 0);
+
+  const remainingDaily = Math.max(0, account * (dailyLossPct / 100) + todayPnl);
+  const remainingOverall = Math.max(0, account * (maxLossPct / 100) + totalPnl);
+
+  const lockBlocked = !!(lockState.lockedUntil && Date.now() < lockState.lockedUntil);
+  const ok = result.riskEur <= remainingDaily && result.riskEur <= remainingOverall && !lockBlocked;
+
+  setText("decisionOut", ok ? "OK" : "Blocked");
+  setText("decisionOut_dup", ok ? "OK" : "Blocked");
+  setStatusClass("decisionOut", ok ? "ok" : "bad");
+  setStatusClass("decisionOut_dup", ok ? "ok" : "bad");
+}
+
+function renderLock() {
+  const maxStreak = inputNum("maxStreak", 3);
+  const cooldownMin = inputNum("cooldownMin", 120);
+
+  setValue("streakNow", lockState.streak);
+
+  let unlocked = true;
+  if (lockState.lockedUntil && Date.now() < lockState.lockedUntil) {
+    unlocked = false;
+  }
+
+  if (lockState.streak >= maxStreak && cooldownMin > 0 && !lockState.lockedUntil) {
+    lockState.lockedUntil = Date.now() + cooldownMin * 60 * 1000;
+    saveLock();
+    unlocked = false;
+  }
+
+  if (lockState.lockedUntil && Date.now() >= lockState.lockedUntil) {
+    lockState.lockedUntil = null;
+    lockState.streak = 0;
+    saveLock();
+    unlocked = true;
+  }
+
+  setText("lockStatus", hasPremium() ? (unlocked ? "Unlocked" : "Locked") : "Pro required");
+  setStatusClass("lockStatus", hasPremium() ? (unlocked ? "ok" : "bad") : "warn");
+
+  if (!hasPremium()) {
+    setText("lockHint", "Start Trial / Pro to activate loss-streak lock.");
+    return;
+  }
+
+  if (unlocked) {
+    setText("lockHint", `Current streak: ${lockState.streak}`);
+  } else {
+    const minsLeft = Math.max(1, Math.ceil((lockState.lockedUntil - Date.now()) / 60000));
+    setText("lockHint", `Cooldown active: ${minsLeft} min left`);
+  }
+}
+
+function registerWin() {
+  if (!hasPremium()) {
+    alert("Loss-streak lock is available in Trial / Pro.");
+    return;
+  }
+  lockState.streak = 0;
+  lockState.lockedUntil = null;
+  saveLock();
+  renderLock();
+}
+
+function registerLoss() {
+  if (!hasPremium()) {
+    alert("Loss-streak lock is available in Trial / Pro.");
+    return;
+  }
+
+  const maxStreak = inputNum("maxStreak", 3);
+  const cooldownMin = inputNum("cooldownMin", 120);
+
+  lockState.streak += 1;
+  if (lockState.streak >= maxStreak && cooldownMin > 0) {
+    lockState.lockedUntil = Date.now() + cooldownMin * 60 * 1000;
+  }
+
+  saveLock();
+  renderLock();
+}
+
+function resetLock() {
+  lockState.streak = 0;
+  lockState.lockedUntil = null;
+  saveLock();
+  renderLock();
+}
+
+function calculateTrade() {
+  let result;
+  if (calcMode === "zone") {
+    if (!hasPremium()) {
+      alert("Zone mode is available in Trial / Pro.");
+      return;
     }
+    result = calcZone();
+  } else {
+    result = calcManual();
+  }
 
-    body {
-      margin: 0;
-      color: var(--text);
-      font-family: Inter, Arial, system-ui, sans-serif;
-      background:
-        radial-gradient(circle at top left, rgba(79,124,255,.18), transparent 32%),
-        radial-gradient(circle at top right, rgba(34,197,94,.08), transparent 22%),
-        linear-gradient(180deg, #090c13 0%, #0b1018 100%);
+  lastResult = result;
+  renderResults(result);
+  renderDecision(result);
+}
+
+function canTakeTrade() {
+  if (!hasPremium()) {
+    alert("Decision engine is available in Trial / Pro.");
+    return;
+  }
+  if (!lastResult) {
+    calculateTrade();
+    return;
+  }
+  renderDecision(lastResult);
+}
+
+function setChallengePreset(amount) {
+  setValue("accountSize", amount);
+  setValue("balance", amount);
+  setValue("dailyLossPct", "5");
+  setValue("maxLossPct", "10");
+  renderChallenge();
+  if (lastResult) renderDecision(lastResult);
+}
+
+function bindEvents() {
+  $("manualCalcModeBtn")?.addEventListener("click", () => {
+    calcMode = "manual";
+    saveModes();
+    renderModeUI();
+  });
+
+  $("zoneCalcModeBtn")?.addEventListener("click", () => {
+    if (!hasPremium()) {
+      alert("Zone mode is available in Trial / Pro.");
+      return;
     }
+    calcMode = "zone";
+    saveModes();
+    renderModeUI();
+  });
 
-    .wrap {
-      max-width: 1180px;
-      margin: 0 auto;
-      padding: 22px 16px 50px;
+  $("quickModeBtn")?.addEventListener("click", () => {
+    appMode = "quick";
+    saveModes();
+    renderModeUI();
+  });
+
+  $("disciplineModeBtn")?.addEventListener("click", () => {
+    if (!hasPremium()) {
+      alert("Discipline tools are available in Trial / Pro.");
+      return;
     }
-
-    .topbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 14px;
-      margin-bottom: 18px;
-      flex-wrap: wrap;
-    }
-
-    .brandTitle {
-      margin: 0;
-      font-size: 34px;
-      line-height: 1;
-      letter-spacing: -0.03em;
-      font-weight: 800;
-    }
-
-    .brandSub {
-      margin-top: 8px;
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .topbarRight {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      font-size: 12px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,.03);
-      color: #dbe4ff;
-      white-space: nowrap;
-    }
-
-    .pill.pro {
-      border-color: rgba(79,124,255,.55);
-      background: rgba(79,124,255,.13);
-      color: #cddcff;
-    }
-
-    .pill.trial {
-      border-color: rgba(245,158,11,.45);
-      background: rgba(245,158,11,.12);
-      color: #ffe1a3;
-    }
-
-    .pill.free {
-      border-color: rgba(255,255,255,.1);
-      background: rgba(255,255,255,.04);
-      color: #cfd7ea;
-    }
-
-    .modeSwitch {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 16px;
-    }
-
-    .modeBtn {
-      width: 100%;
-      padding: 13px 14px;
-      border-radius: 16px;
-      border: 1px solid var(--line);
-      background: linear-gradient(180deg, #171e2e 0%, #121826 100%);
-      color: var(--text);
-      font-weight: 700;
-      cursor: pointer;
-      transition: .18s ease;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
-    }
-
-    .modeBtn:hover {
-      transform: translateY(-1px);
-      border-color: #3b4b73;
-    }
-
-    .modeBtn.active {
-      background: linear-gradient(180deg, rgba(79,124,255,.28) 0%, rgba(79,124,255,.14) 100%);
-      border-color: rgba(79,124,255,.55);
-    }
-
-    .dashboard {
-      display: grid;
-      grid-template-columns: 1.1fr 1.1fr .8fr .8fr;
-      gap: 12px;
-      margin-bottom: 14px;
-    }
-
-    .statCard {
-      background: linear-gradient(180deg, rgba(20,27,40,.98) 0%, rgba(16,22,34,.98) 100%);
-      border: 1px solid var(--soft-line);
-      border-radius: 18px;
-      padding: 16px;
-      box-shadow: var(--shadow);
-    }
-
-    .statLabel {
-      color: var(--muted);
-      font-size: 12px;
-      margin-bottom: 8px;
-    }
-
-    .statValue {
-      font-size: 28px;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-    }
-
-    .statHint {
-      margin-top: 8px;
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .layout {
-      display: grid;
-      grid-template-columns: 1.18fr .82fr;
-      gap: 14px;
-      align-items: start;
-    }
-
-    .stack {
-      display: grid;
-      gap: 14px;
-    }
-
-    .card {
-      background: linear-gradient(180deg, rgba(17,22,34,.98) 0%, rgba(13,18,28,.98) 100%);
-      border: 1px solid var(--soft-line);
-      border-radius: var(--radius);
-      padding: 18px;
-      box-shadow: var(--shadow);
-      overflow: visible;
-      position: relative;
-      z-index: 1;
-    }
-
-    .sectionTitle {
-      margin: 0 0 6px;
-      font-size: 15px;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-    }
-
-    .sectionSub {
-      color: var(--muted);
-      font-size: 12px;
-      margin-bottom: 14px;
-      line-height: 1.45;
-    }
-
-    .grid2, .grid3, .grid4 {
-      display: grid;
-      gap: 12px;
-    }
-
-    .grid2 { grid-template-columns: 1fr 1fr; }
-    .grid3 { grid-template-columns: 1fr 1fr 1fr; }
-    .grid4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
-
-    label {
-      display: block;
-      margin: 0 0 7px;
-      font-size: 12px;
-      color: #dbe4ff;
-      font-weight: 600;
-    }
-
-    input, select, button {
-      font: inherit;
-    }
-
-    input,
-    select {
-      width: 100%;
-      padding: 13px 14px;
-      border-radius: 16px;
-      border: 1px solid #2c3958;
-      background: linear-gradient(180deg, #121928 0%, #0f1521 100%);
-      color: var(--text);
-      outline: none;
-      transition: .16s ease;
-      pointer-events: auto;
-      position: relative;
-      z-index: 2;
-    }
-
-    input:focus,
-    select:focus {
-      border-color: rgba(79,124,255,.75);
-      box-shadow: 0 0 0 3px rgba(79,124,255,.12);
-    }
-
-    button {
-      width: 100%;
-      padding: 13px 14px;
-      border-radius: 16px;
-      border: 1px solid #35508a;
-      background: linear-gradient(180deg, #50d7ff 0%, #71b7ff 100%);
-      color: #09111d;
-      font-weight: 800;
-      cursor: pointer;
-      transition: .18s ease;
-      pointer-events: auto;
-      position: relative;
-      z-index: 2;
-    }
-
-    button:hover {
-      transform: translateY(-1px);
-      filter: brightness(1.03);
-    }
-
-    button.secondary {
-      background: linear-gradient(180deg, #1b2332 0%, #121926 100%);
-      color: var(--text);
-      border-color: #2f3b59;
-    }
-
-    button:disabled {
-      opacity: .55;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .tiny {
-      margin-top: 6px;
-      color: var(--muted);
-      font-size: 11px;
-      line-height: 1.45;
-    }
-
-    .divider {
-      height: 1px;
-      background: var(--soft-line);
-      margin: 16px 0;
-    }
-
-    .row {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      padding: 11px 0;
-      border-bottom: 1px solid var(--soft-line);
-      align-items: center;
-    }
-
-    .row:last-child {
-      border-bottom: 0;
-    }
-
-    .muted {
-      color: var(--muted);
-    }
-
-    .ok {
-      color: var(--green);
-      font-weight: 800;
-    }
-
-    .warn {
-      color: var(--orange);
-      font-weight: 800;
-    }
-
-    .bad {
-      color: var(--red);
-      font-weight: 800;
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
-    .btnRow {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-    }
-
-    .rightSticky {
-      position: sticky;
-      top: 16px;
-    }
-
-    .premiumBox {
-      border: 1px dashed rgba(79,124,255,.45);
-      border-radius: 16px;
-      padding: 14px;
-      background: rgba(79,124,255,.08);
-    }
-
-    .premiumBox h4 {
-      margin: 0 0 8px;
-      font-size: 14px;
-    }
-
-    .premiumBox p {
-      margin: 0 0 12px;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.5;
-    }
-
-    /* dropdown visibility fix */
-    select option {
-      color: #111827;
-      background: #ffffff;
-    }
-
-    @media (max-width: 1020px) {
-      .dashboard {
-        grid-template-columns: 1fr 1fr;
-      }
-
-      .layout {
-        grid-template-columns: 1fr;
-      }
-
-      .rightSticky {
-        position: static;
-      }
-    }
-
-    @media (max-width: 760px) {
-      .grid2,
-      .grid3,
-      .grid4,
-      .btnRow,
-      .modeSwitch,
-      .dashboard {
-        grid-template-columns: 1fr;
-      }
-
-      .brandTitle {
-        font-size: 28px;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <div class="topbar">
-      <div>
-        <h1 class="brandTitle">PropEngine</h1>
-        <div class="brandSub">Prop Firm Risk, Discipline &amp; Decision Dashboard</div>
-      </div>
-      <div class="topbarRight">
-        <span id="planBadge" class="pill free">Free Plan</span>
-        <button id="upgradeBtnSecondary" style="width:auto; min-width:140px;">Upgrade</button>
-      </div>
-    </div>
-
-    <div class="dashboard">
-      <div class="statCard">
-        <div class="statLabel">Risk</div>
-        <div id="riskOut" class="statValue">-</div>
-        <div class="statHint">Current trade risk in EUR</div>
-      </div>
-
-      <div class="statCard">
-        <div class="statLabel">Position Size</div>
-        <div id="lotsOut" class="statValue">-</div>
-        <div class="statHint">Calculated lot size</div>
-      </div>
-
-      <div class="statCard">
-        <div class="statLabel">Daily Room</div>
-        <div id="remainingDailyOut" class="statValue">-</div>
-        <div class="statHint">Premium challenge metric</div>
-      </div>
-
-      <div class="statCard">
-        <div class="statLabel">Decision</div>
-        <div id="decisionOut" class="statValue">-</div>
-        <div class="statHint">Premium trade approval</div>
-      </div>
-    </div>
-
-    <div class="modeSwitch">
-      <button id="quickModeBtn" type="button" class="modeBtn active">Quick</button>
-      <button id="disciplineModeBtn" type="button" class="modeBtn">Discipline 🔒</button>
-    </div>
-
-    <div class="layout">
-      <div class="stack">
-        <div class="card">
-          <h3 class="sectionTitle">Account</h3>
-          <div class="sectionSub">Create account to activate Trial and unlock premium tools</div>
-
-          <div id="authSignedOut">
-            <div class="grid2">
-              <div>
-                <label>Email</label>
-                <input id="email" type="email" placeholder="you@email.com">
-              </div>
-              <div>
-                <label>Password</label>
-                <input id="password" type="password" placeholder="min. 6 chars">
-              </div>
-            </div>
-
-            <div class="grid2" style="margin-top:12px;">
-              <button id="signUpBtn" type="button">Create account</button>
-              <button id="signInBtn" type="button" class="secondary">Sign in</button>
-            </div>
-
-            <div style="margin-top:12px;">
-              <button id="helpBtn" type="button" class="secondary">Help</button>
-            </div>
-          </div>
-
-          <div id="authSignedIn" class="hidden">
-            <div class="row">
-              <div id="userStatus">Signed in</div>
-              <button id="signOutBtn" type="button" class="secondary" style="max-width:180px;">Sign out</button>
-            </div>
-
-            <div id="trialBanner" class="tiny" style="margin-top:10px;"></div>
-
-            <div class="grid2" style="margin-top:12px;">
-              <button id="startTrialBtn" type="button" class="secondary">Start Trial</button>
-              <button id="upgradeBtn" type="button">Upgrade</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <h3 class="sectionTitle">Quick Calculator</h3>
-          <div class="sectionSub">Manual mode is free. Zone mode is premium.</div>
-
-          <div class="modeSwitch">
-            <button id="manualCalcModeBtn" type="button" class="modeBtn active">Manual mode</button>
-            <button id="zoneCalcModeBtn" type="button" class="modeBtn">Zone mode</button>
-          </div>
-
-          <div class="grid3">
-            <div>
-              <label>Symbol</label>
-              <input id="symbolSearch" type="text" placeholder="Search symbol..." style="margin-bottom:10px;">
-              <select id="symbol"></select>
-
-              <div style="margin-top:10px;">
-                <button id="showAddSymbol" type="button" class="secondary">+ Add Custom Symbol</button>
-              </div>
-
-              <div id="addSymbolBox" class="hidden" style="margin-top:10px;">
-                <input id="customSymbolName" placeholder="Symbol name" style="margin-bottom:8px;">
-                <input id="customUnitSize" placeholder="Unit size" style="margin-bottom:8px;">
-                <input id="customValuePerUnit" placeholder="Value per unit @1 lot" style="margin-bottom:8px;">
-                <input id="customLotStep" placeholder="Lot step" style="margin-bottom:8px;">
-                <button id="addSymbolBtn" type="button">Save Symbol</button>
-              </div>
-            </div>
-
-            <div>
-              <label>Direction</label>
-              <select id="direction">
-                <option value="LONG">LONG</option>
-                <option value="SHORT">SHORT</option>
-              </select>
-            </div>
-
-            <div>
-              <label>RR (if TP empty)</label>
-              <input id="rr" type="text" inputmode="decimal" value="2">
-              <div class="tiny">Comma decimals supported</div>
-            </div>
-          </div>
-
-          <div class="grid3" style="margin-top:12px;">
-            <div>
-              <label>Balance (EUR)</label>
-              <input id="balance" type="text" inputmode="decimal" value="10000">
-            </div>
-            <div>
-              <label>Risk %</label>
-              <input id="riskPct" type="text" inputmode="decimal" value="0,5">
-            </div>
-            <div>
-              <label>Entry price</label>
-              <input id="entry" type="text" inputmode="decimal" value="1,10000">
-            </div>
-          </div>
-
-          <div id="manualModeFields" style="margin-top:12px;">
-            <div class="grid3">
-              <div>
-                <label id="slUnitsLabel">SL (pips)</label>
-                <input id="slUnits" type="text" inputmode="decimal" value="15">
-                <div class="tiny">Example: 15 units</div>
-              </div>
-              <div>
-                <label id="tpUnitsLabel">TP (pips)</label>
-                <input id="tpUnits" type="text" inputmode="decimal" value="">
-                <div class="tiny">Leave empty → uses RR</div>
-              </div>
-              <div>
-                <label>TP buffer (pips/ticks)</label>
-                <input id="tpBuffer" type="text" inputmode="decimal" value="0">
-                <div class="tiny">Optional</div>
-              </div>
-            </div>
-          </div>
-
-          <div id="zoneModeFields" class="hidden" style="margin-top:12px;">
-            <div class="grid4">
-              <div>
-                <label>Zone top</label>
-                <input id="zoneTop" type="text" inputmode="decimal">
-              </div>
-              <div>
-                <label>Zone bottom</label>
-                <input id="zoneBottom" type="text" inputmode="decimal">
-              </div>
-              <div>
-                <label>Zone size (units)</label>
-                <input id="zoneSize" type="text" readonly>
-              </div>
-              <div>
-                <label>Buffer (units)</label>
-                <input id="zoneBuffer" type="text" inputmode="decimal" value="2">
-              </div>
-            </div>
-
-            <div class="grid3" style="margin-top:12px;">
-              <div>
-                <label>Computed SL (units)</label>
-                <input id="zoneSlUnits" type="text" readonly>
-              </div>
-              <div>
-                <label>TP1 (1R)</label>
-                <input id="zoneTp1Units" type="text" readonly>
-              </div>
-              <div>
-                <label>TP2 (2R)</label>
-                <input id="zoneTp2Units" type="text" readonly>
-              </div>
-            </div>
-          </div>
-
-          <div class="grid3" style="margin-top:12px;">
-            <div>
-              <label>Unit size (pip/tick)</label>
-              <input id="unitSize" type="text" inputmode="decimal" value="0,0001">
-              <div class="tiny">Editable override</div>
-            </div>
-            <div>
-              <label>Value per unit @ 1 lot (EUR)</label>
-              <input id="valuePerUnit" type="text" inputmode="decimal" value="10">
-              <div class="tiny">Most important for accuracy</div>
-            </div>
-            <div>
-              <label>Lot step</label>
-              <input id="lotStep" type="text" inputmode="decimal" value="0,01">
-            </div>
-          </div>
-
-          <div class="grid2" style="margin-top:14px;">
-            <button id="calcBtn" type="button">Calculate</button>
-            <button id="canTakeBtn" type="button" class="secondary">Can I take this trade? (Pro)</button>
-          </div>
-
-          <div id="clickStatus" class="tiny" style="margin-top:10px;"></div>
-        </div>
-
-        <div id="lockCard" class="card">
-          <h3 class="sectionTitle">Loss-streak lock</h3>
-          <div class="sectionSub">Cooldown after consecutive losses</div>
-
-          <div class="grid3">
-            <div>
-              <label>Max loss streak</label>
-              <input id="maxStreak" type="text" inputmode="numeric" value="3">
-            </div>
-            <div>
-              <label>Cooldown (minutes)</label>
-              <input id="cooldownMin" type="text" inputmode="numeric" value="120">
-            </div>
-            <div>
-              <label>Current streak</label>
-              <input id="streakNow" type="text" inputmode="numeric" value="0">
-            </div>
-          </div>
-
-          <div class="grid3" style="margin-top:12px;">
-            <button id="winBtn" type="button">Win ✅ (reset)</button>
-            <button id="lossBtn" type="button" class="secondary">Loss ❌ (+1)</button>
-            <button id="resetLockBtn" type="button" class="secondary">Reset lock</button>
-          </div>
-
-          <div style="margin-top:12px;">
-            Status: <span id="lockStatus" class="warn">Pro required</span>
-            <div id="lockHint" class="tiny"></div>
-          </div>
-        </div>
-
-        <div class="card">
-          <h3 class="sectionTitle">Results</h3>
-
-          <div class="row"><div>Risk (EUR)</div><div id="riskOut_dup">-</div></div>
-          <div class="row"><div>Loss per 1 lot (EUR)</div><div id="lossPerLotOut">-</div></div>
-          <div class="row"><div>Position size (lots)</div><div id="lotsOut_dup">-</div></div>
-          <div class="row"><div>SL distance (units)</div><div id="slUnitsOut">-</div></div>
-          <div class="row"><div>TP distance (units)</div><div id="tpUnitsOut">-</div></div>
-          <div class="row"><div>SL price</div><div id="slPriceOut">-</div></div>
-          <div class="row"><div>TP price</div><div id="tpPriceOut">-</div></div>
-
-          <div class="divider"></div>
-
-          <div class="row"><div>Total lot</div><div id="totalLotOut">-</div></div>
-          <div class="row"><div>Lot 1 (TP1)</div><div id="lot1Out">-</div></div>
-          <div class="row"><div>Lot 2 (TP2)</div><div id="lot2Out">-</div></div>
-          <div class="row"><div>TP1 price</div><div id="tp1PriceOut">-</div></div>
-          <div class="row"><div>TP2 price</div><div id="tp2PriceOut">-</div></div>
-          <div class="row"><div>Break-even after TP1</div><div id="beAfterTp1Out">-</div></div>
-
-          <div class="divider"></div>
-
-          <div class="row"><div>Decision</div><div id="decisionOut_dup">-</div></div>
-        </div>
-      </div>
-
-      <div class="stack rightSticky">
-        <div id="premiumUpsell" class="card">
-          <div class="premiumBox">
-            <h4>Unlock Trial / Pro</h4>
-            <p>Zone mode, split TP, challenge engine, reality check, discipline tools and custom symbols are premium features.</p>
-            <button id="upgradeBtnSecondary2" type="button">Upgrade now</button>
-          </div>
-        </div>
-
-        <div id="realityCard" class="card">
-          <h3 class="sectionTitle">Pre-trade reality check</h3>
-          <div class="sectionSub">See the real impact of the trade before you enter</div>
-
-          <div class="row"><div>If SL hits → new balance</div><div id="balanceAfterSlOut">-</div></div>
-          <div class="row"><div>If TP1 hits → profit</div><div id="profitTp1Out">-</div></div>
-          <div class="row"><div>If TP2 hits → profit</div><div id="profitTp2Out">-</div></div>
-          <div class="row"><div>This trade uses % of remaining daily limit</div><div id="dailyUsePctOut">-</div></div>
-          <div class="row"><div>Reality check</div><div id="realityCheckOut">-</div></div>
-        </div>
-
-        <div id="challengeCard" class="card">
-          <h3 class="sectionTitle">Prop Challenge Engine</h3>
-          <div class="sectionSub">Challenge limits and remaining room</div>
-
-          <div class="btnRow" style="margin-bottom:12px;">
-            <button id="presetChallenge10K" type="button" class="secondary">Challenge 10K</button>
-            <button id="presetChallenge25K" type="button" class="secondary">Challenge 25K</button>
-            <button id="presetChallenge50K" type="button" class="secondary">Challenge 50K</button>
-            <button id="presetChallenge100K" type="button" class="secondary">Challenge 100K</button>
-          </div>
-
-          <div class="grid3">
-            <div>
-              <label>Account size (EUR)</label>
-              <input id="accountSize" type="text" inputmode="decimal" value="10000">
-            </div>
-            <div>
-              <label>Daily loss %</label>
-              <input id="dailyLossPct" type="text" inputmode="decimal" value="5">
-            </div>
-            <div>
-              <label>Max loss %</label>
-              <input id="maxLossPct" type="text" inputmode="decimal" value="10">
-            </div>
-          </div>
-
-          <div class="grid2" style="margin-top:12px;">
-            <div>
-              <label>Today PnL (EUR)</label>
-              <input id="todayPnl" type="text" inputmode="decimal" value="0">
-            </div>
-            <div>
-              <label>Total PnL (EUR)</label>
-              <input id="totalPnL" type="text" inputmode="decimal" value="0">
-            </div>
-          </div>
-
-          <div class="divider"></div>
-
-          <div class="row"><div>Remaining Daily (EUR)</div><div id="remainingDailyOut_dup">-</div></div>
-          <div class="row"><div>Remaining Overall (EUR)</div><div id="remainingOverallOut">-</div></div>
-          <div class="row"><div>Trade Status</div><div id="tradeStatusOut">-</div></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script src="app.js?v=728"></script>
-</body>
-</html>
+    appMode = "discipline";
+    saveModes();
+    renderModeUI();
+  });
+
+  $("calcBtn")?.addEventListener("click", calculateTrade);
+  $("canTakeBtn")?.addEventListener("click", canTakeTrade);
+
+  $("signUpBtn")?.addEventListener("click", signUp);
+  $("signInBtn")?.addEventListener("click", signIn);
+  $("signOutBtn")?.addEventListener("click", signOut);
+  $("startTrialBtn")?.addEventListener("click", startTrial);
+
+  $("upgradeBtn")?.addEventListener("click", upgradePlan);
+  $("upgradeBtnSecondary")?.addEventListener("click", upgradePlan);
+  $("upgradeBtnSecondary2")?.addEventListener("click", upgradePlan);
+
+  $("showAddSymbol")?.addEventListener("click", () => {
+    const box = $("addSymbolBox");
+    if (box) box.classList.toggle("hidden");
+  });
+
+  $("addSymbolBtn")?.addEventListener("click", addCustomSymbol);
+
+  $("symbol")?.addEventListener("change", () => {
+    applySymbolToInputs();
+    if (lastResult) calculateTrade();
+  });
+
+  $("symbolSearch")?.addEventListener("input", filterSymbols);
+
+  $("winBtn")?.addEventListener("click", registerWin);
+  $("lossBtn")?.addEventListener("click", registerLoss);
+  $("resetLockBtn")?.addEventListener("click", resetLock);
+
+  $("presetChallenge10K")?.addEventListener("click", () => setChallengePreset(10000));
+  $("presetChallenge25K")?.addEventListener("click", () => setChallengePreset(25000));
+  $("presetChallenge50K")?.addEventListener("click", () => setChallengePreset(50000));
+  $("presetChallenge100K")?.addEventListener("click", () => setChallengePreset(100000));
+
+  const watchIds = [
+    "balance", "riskPct", "entry", "slUnits", "tpUnits", "tpBuffer",
+    "unitSize", "valuePerUnit", "lotStep", "rr", "direction",
+    "zoneTop", "zoneBottom", "zoneBuffer",
+    "accountSize", "dailyLossPct", "maxLossPct", "todayPnl", "totalPnL",
+    "maxStreak", "cooldownMin"
+  ];
+
+  watchIds.forEach((id) => {
+    const el = $(id);
+    if (!el) return;
+
+    const handler = () => {
+      if (lastResult) calculateTrade();
+      renderChallenge();
+      renderLock();
+    };
+
+    el.addEventListener("input", handler);
+    el.addEventListener("change", handler);
+  });
+
+  $("helpBtn")?.addEventListener("click", () => {
+    alert("Quick mode is free. Zone mode, discipline tools and challenge decision are Trial / Pro.");
+  });
+}
+
+function seedDefaults() {
+  if ($("balance") && !$("balance").value) setValue("balance", "10000");
+  if ($("riskPct") && !$("riskPct").value) setValue("riskPct", "0,5");
+  if ($("entry") && !$("entry").value) setValue("entry", "1,10000");
+  if ($("slUnits") && !$("slUnits").value) setValue("slUnits", "15");
+  if ($("rr") && !$("rr").value) setValue("rr", "2");
+  if ($("tpBuffer") && !$("tpBuffer").value) setValue("tpBuffer", "0");
+  if ($("unitSize") && !$("unitSize").value) setValue("unitSize", "0,0001");
+  if ($("valuePerUnit") && !$("valuePerUnit").value) setValue("valuePerUnit", "10");
+  if ($("lotStep") && !$("lotStep").value) setValue("lotStep", "0,01");
+
+  if ($("accountSize") && !$("accountSize").value) setValue("accountSize", "10000");
+  if ($("dailyLossPct") && !$("dailyLossPct").value) setValue("dailyLossPct", "5");
+  if ($("maxLossPct") && !$("maxLossPct").value) setValue("maxLossPct", "10");
+  if ($("todayPnl") && !$("todayPnl").value) setValue("todayPnl", "0");
+  if ($("totalPnL") && !$("totalPnL").value) setValue("totalPnL", "0");
+
+  if ($("maxStreak") && !$("maxStreak").value) setValue("maxStreak", "3");
+  if ($("cooldownMin") && !$("cooldownMin").value) setValue("cooldownMin", "120");
+  if ($("streakNow") && !$("streakNow").value) setValue("streakNow", "0");
+}
+
+function renderAll() {
+  renderPlanBadge();
+  renderAuth();
+  renderModeUI();
+  renderChallenge();
+  renderLock();
+
+  if (lastResult) {
+    renderResults(lastResult);
+    renderDecision(lastResult);
+  } else {
+    setText("remainingDailyOut", money(inputNum("accountSize", 10000) * (inputNum("dailyLossPct", 5) / 100)));
+    setText("remainingDailyOut_dup", money(inputNum("accountSize", 10000) * (inputNum("dailyLossPct", 5) / 100)));
+    setText("decisionOut", "-");
+    setText("decisionOut_dup", "-");
+  }
+}
+
+function init() {
+  loadAuth();
+  loadLock();
+  loadModes();
+  loadCustomSymbols();
+
+  seedDefaults();
+  populateSymbols();
+  filterSymbols();
+  applySymbolToInputs();
+  bindEvents();
+  renderAll();
+}
+
+document.addEventListener("DOMContentLoaded", init);
